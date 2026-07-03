@@ -1,0 +1,35 @@
+CREATE TABLE IF NOT EXISTS auditoria_categorias (
+    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
+    accion VARCHAR(255),
+    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS auditoria_clientes (
+    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
+    accion VARCHAR(255),
+    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS auditoria_compras (
+    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
+    accion VARCHAR(255),
+    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS auditoria_productos (
+    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
+    accion VARCHAR(255),
+    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS auditoria_proveedores (
+    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
+    accion VARCHAR(255),
+    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS auditoria_ventas (
+    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
+    accion VARCHAR(255),
+    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS auditoria_inventario (
+    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
+    accion VARCHAR(255),
+    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP
+);

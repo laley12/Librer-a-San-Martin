@@ -1,0 +1,23 @@
+# Database credentials
+config/conexion.php
+
+# OS junk
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Uploaded assets (user content)
+assets/uploads/usuarios/*
+!assets/uploads/usuarios/.gitkeep
+assets/uploads/qr/*
+!assets/uploads/qr/.gitkeep
+
+# Temp files
+*.log
+*.tmp
