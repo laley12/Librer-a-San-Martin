@@ -1,4 +1,4 @@
-const CACHE = "lsm-v4";
+const CACHE = "lsm-v5";
 const BASE = ["/", "/index.html", "/movil.html", "/manifest.webmanifest", "/icono.svg"];
 const ASSETS = [
   "/assets/app.js", "/assets/ui.js", "/assets/data.js", "/assets/supabase-client.js",
@@ -26,15 +26,22 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
+  
+  // Solo manejar peticiones GET del mismo origen
   if (e.request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/rest/") || url.pathname.startsWith("/auth/")) return;
+  
+  // No cachear APIs
+  if (url.pathname.startsWith("/rest/") || url.pathname.startsWith("/auth/") || url.pathname.startsWith("/api/")) return;
 
   e.respondWith(
     fetch(e.request)
       .then((res) => {
-        const copia = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copia)).catch(() => {});
+        // Solo cachear respuestas exitosas
+        if (res.ok) {
+          const copia = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copia)).catch(() => {});
+        }
         return res;
       })
       .catch(() => caches.match(e.request).then((r) => r || caches.match("/movil.html")))

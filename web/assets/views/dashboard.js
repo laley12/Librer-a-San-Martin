@@ -22,6 +22,10 @@ export function render() {
   })).reverse();
   const maxChart = Math.max(...chartData.map((d) => d.value), 1);
 
+  // Guardar datos para uso en mount()
+  window.__dashboardChartData = chartData;
+  window.__dashboardMaxS = maxS;
+
   return `
   <div class="space-y-4 md:space-y-6 fade">
     ${!cajaAbierta ? `
@@ -144,62 +148,6 @@ export function render() {
         <div class="w-full h-48 md:h-56" id="chartSemanal">
           <canvas id="graficoSemanal"></canvas>
         </div>
-        <script>
-          (function() {
-            const ctx = document.getElementById('graficoSemanal');
-            if (ctx && window.Chart) {
-              new Chart(ctx, {
-                type: 'bar',
-                data: {
-                  labels: ${JSON.stringify(chartData.map(d => d.label))},
-                  datasets: [{
-                    label: 'Ventas (Bs)',
-                    data: ${JSON.stringify(chartData.map(d => d.value))},
-                    backgroundColor: 'rgba(30, 60, 114, 0.7)',
-                    borderColor: '#1e3c72',
-                    borderWidth: 1,
-                    borderRadius: 6,
-                    borderSkipped: false,
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                      backgroundColor: '#1e3c72',
-                      titleColor: '#fff',
-                      bodyColor: '#fff',
-                      padding: 10,
-                      displayColors: false,
-                      callbacks: {
-                        label: function(ctx) {
-                          return 'Bs ' + ctx.raw.toLocaleString('es-BO', {minimumFractionDigits: 2});
-                        }
-                      }
-                    }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      grid: { color: 'rgba(0,0,0,0.05)' },
-                      ticks: {
-                        callback: function(value) {
-                          return 'Bs ' + value.toLocaleString('es-BO');
-                        }
-                      }
-                    },
-                    x: {
-                      grid: { display: false },
-                      ticks: { color: '#64748b', font: { size: 11 } }
-                    }
-                  }
-                }
-              });
-            }
-          })();
-        </script>
       `, `<span class="text-[10px] text-slate-400">máx ${moneyCorto(maxS)}</span>`)}
       <div class="lg:col-span-1">
       ${seccion("Top productos", top.length ? top.map((t) => `
@@ -253,6 +201,69 @@ export function render() {
   </div>`;
 }
 
+function initChart() {
+  try {
+    const chartData = window.__dashboardChartData;
+    const maxS = window.__dashboardMaxS;
+    if (!chartData || !window.Chart) return;
+    
+    const ctx = document.getElementById('graficoSemanal');
+    if (!ctx) return;
+    
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartData.map(d => d.label),
+        datasets: [{
+          label: 'Ventas (Bs)',
+          data: chartData.map(d => d.value),
+          backgroundColor: 'rgba(30, 60, 114, 0.7)',
+          borderColor: '#1e3c72',
+          borderWidth: 1,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1e3c72',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            padding: 10,
+            displayColors: false,
+            callbacks: {
+              label: function(ctx) {
+                return 'Bs ' + ctx.raw.toLocaleString('es-BO', {minimumFractionDigits: 2});
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: {
+              callback: function(value) {
+                return 'Bs ' + value.toLocaleString('es-BO');
+              }
+            }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#64748b', font: { size: 11 } }
+          }
+        }
+      }
+    });
+  } catch (e) {
+    console.warn('Chart.js init failed:', e);
+  }
+}
+
 export function mount(root, ctx) {
   root.addEventListener("click", (e) => {
     const b = e.target.closest("[data-ir]");
@@ -261,4 +272,20 @@ export function mount(root, ctx) {
       ctx.ir(b.dataset.ir, true, params);
     }
   });
+  
+  // Inicializar gráfico de forma defensiva cuando Chart.js esté disponible
+  if (window.Chart) {
+    initChart();
+  } else {
+    // Esperar a que Chart.js cargue (se carga en head sin defer)
+    const checkChart = setInterval(() => {
+      if (window.Chart) {
+        clearInterval(checkChart);
+        initChart();
+      }
+    }, 100);
+    
+    // Timeout de seguridad
+    setTimeout(() => clearInterval(checkChart), 5000);
+  }
 }
