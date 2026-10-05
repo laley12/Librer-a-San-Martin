@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#1e3c72" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Librería SM" />
+<meta name="description" content="Librería San Martín · punto de venta móvil" />
+<title>Librería San Martín · Móvil</title>
+<script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" href="/icono.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/icono-192.png" />
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'Segoe UI', 'sans-serif'] } } } };
+</script>
+<style>
+  html, body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { font-family: Inter, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
+  #vista { -webkit-overflow-scrolling: touch; }
+  .fade { animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(3px) } to { opacity: 1; transform: none } }
+  .safe-b { padding-bottom: calc(env(safe-area-inset-bottom, 0px)); }
+  .safe-t { padding-top: env(safe-area-inset-top, 0px); }
+  .no-sel { user-select: none; -webkit-user-select: none; }
+</style>
+</head>
+<body class="w-full h-full bg-slate-100 text-slate-800 no-sel">
+
+<!-- LOGIN (generado por app.js) -->
+<div id="login" class="fixed inset-0 w-full h-full z-50 flex items-center justify-center bg-gradient-to-br from-[#1e3c72] via-[#2a5298] to-[#1e3c72]"></div>
+
+<!-- APP: ocupa el 100% del dispositivo, sin marco ni emulador -->
+<div id="app" class="hidden w-full h-full min-h-screen flex flex-col">
+  <header class="bg-[#1e3c72] text-white px-4 py-3 safe-t flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <button id="btnMenu" class="w-10 h-10 -ml-1 grid place-items-center rounded-lg active:bg-white/15 text-xl">☰</button>
+      <div class="min-w-0">
+        <div id="titulo" class="font-bold leading-tight truncate text-[15px]">Librería San Martín</div>
+        <div class="text-[10px] text-blue-200 truncate">
+          <span id="rolUsuario">—</span> · <span id="nombreUsuario">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <span id="dotRT" class="w-2 h-2 rounded-full bg-slate-300"></span>
+      <button id="btnSalir" class="text-[10px] px-2.5 py-1.5 rounded-lg bg-white/15 active:bg-white/25">Salir</button>
+    </div>
+  </header>
+
+  <main id="vista" class="grow w-full overflow-y-auto p-3"></main>
+
+  <nav id="navInferior" class="bg-white border-t border-slate-200 flex shrink-0 safe-b"></nav>
+</div>
+
+<!-- Drawer -->
+<div id="cajon" class="fixed inset-0 z-40 invisible opacity-0 transition-opacity duration-200">
+  <div class="absolute inset-0 bg-slate-900/50" data-cerrar></div>
+  <aside class="absolute left-0 top-0 bottom-0 w-72 max-w-[80%] bg-white shadow-2xl flex flex-col -translate-x-full transition-transform duration-200">
+    <div class="px-4 py-4 bg-[#1e3c72] text-white flex items-center justify-between">
+      <div>
+        <div class="font-bold">Librería San Martín</div>
+        <div class="text-[10px] text-blue-200">Menú</div>
+      </div>
+      <button id="btnCerrarDrawer" class="w-9 h-9 grid place-items-center rounded-lg active:bg-white/15 text-lg">×</button>
+    </div>
+    <div id="drawer" class="grow overflow-y-auto p-3 space-y-1.5"></div>
+    <div class="px-4 py-3 border-t border-slate-100 text-[10px] text-slate-400">
+      Última carga: <span id="ultimaCarga">—</span><br />
+      <span id="txtRT">Conectando Realtime…</span>
+    </div>
+  </aside>
+</div>
+
+<script type="module">
+  import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js";
+  cablearGlobal();
+  iniciar("movil");
+  registrarSW();
+</script>
+</body>
+</html>
