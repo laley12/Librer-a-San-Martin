@@ -33,7 +33,7 @@ if(isset($_POST['actualizar'])){
     $sql = "UPDATE categorias SET nombre_categoria='$nombre', descripcion='$descripcion' WHERE id_categoria=$id_edit";
     mysqli_query($conexion, $sql);
     $id_user = isset($_SESSION['id']) ? intval($_SESSION['id']) : 0;
-    mysqli_query($conexion, "INSERT INTO auditoria_categorias (id_usuario, accion) VALUES ($id_user, 'Modific� categor�a: $nombre (ID: $id_edit)')");
+    mysqli_query($conexion, "INSERT INTO auditoria_categorias (id_usuario, accion) VALUES ($id_user, 'Modificó categoría: $nombre (ID: $id_edit)')");
     header("Location: index.php?msg=updated");
     exit();
 }
@@ -45,7 +45,7 @@ if(isset($_GET['eliminar_id'])){
     $sql = "UPDATE categorias SET activo=0 WHERE id_categoria=$id_del";
     mysqli_query($conexion, $sql);
     $id_user = isset($_SESSION['id']) ? intval($_SESSION['id']) : 0;
-    mysqli_query($conexion, "INSERT INTO auditoria_categorias (id_usuario, accion) VALUES ($id_user, 'Elimin� categor�a: $nom_del (ID: $id_del)')");
+    mysqli_query($conexion, "INSERT INTO auditoria_categorias (id_usuario, accion) VALUES ($id_user, 'Eliminó categoría: $nom_del (ID: $id_del)')");
     header("Location: index.php?msg=deleted");
     exit();
 }
@@ -58,13 +58,14 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Gesti�n de Categor�as - Librer�a San Mart�n</title>
+    <title>Gestión de Categorías - Librería San Martín</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
+<link rel="stylesheet" href="/includes/base.css">
     <style>
-        :root {
+:root {
             --body-bg: #f0f3f8;
             --sidebar-bg: #ffffff;
             --sidebar-text: #1e293b;
@@ -84,7 +85,7 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
             --collapse-dash: #94a3b8;
             --border-color: rgba(0,0,0,0.05);
         }
-        [data-theme="dark"] {
+[data-theme="dark"] {
             --body-bg: #0f172a;
             --sidebar-bg: #1e293b;
             --sidebar-text: #cbd5e1;
@@ -104,43 +105,40 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
             --collapse-dash: #64748b;
             --border-color: rgba(255,255,255,0.06);
         }
-        body {
+body {
             background: var(--body-bg);
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             margin: 0;
             overflow-x: hidden;
         }
-
-        .sidebar { display: flex; flex-direction: column; width: 260px; height: 100vh; position: fixed; background: var(--sidebar-bg); box-shadow: 4px 0 20px rgba(0,0,0,0.03); z-index: 1000; }
-        .sidebar-brand { flex-shrink: 0; background: var(--sidebar-brand-bg); color: #ffffff; padding: 20px; font-size: 1.3rem; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
-        .sidebar-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px 10px; }
-        .sidebar-menu::-webkit-scrollbar { width: 4px; }
-        .sidebar-menu::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-menu::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
-        .sidebar-menu::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-        .sidebar-menu a { display: flex; align-items: center; color: var(--sidebar-text); text-decoration: none; padding: 12px 15px; font-size: 0.95rem; border-radius: 8px; margin-bottom: 5px; transition: all 0.25s ease; cursor: pointer; border-left: 3px solid transparent; }
-        .sidebar-menu a i { font-size: 1.1rem; margin-right: 12px; width: 25px; text-align: center; }
-        .sidebar-menu a:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-accent); border-left-color: #1e3c72; }
-        .sidebar-menu a.active { background: var(--sidebar-active-bg); color: var(--sidebar-accent); font-weight: 700; border-left: 4px solid var(--sidebar-accent); box-shadow: inset 0 0 0 1px rgba(30,60,114,0.06); }
-        .collapse-submenu { position: relative; }
-        .collapse-submenu::before { content: ''; position: absolute; left: 22px; top: 4px; bottom: 4px; width: 2px; background: var(--collapse-line); border-radius: 2px; }
-        .collapse-submenu a { padding-left: 45px !important; font-size: 0.9rem !important; position: relative; border-left: none !important; }
-        .collapse-submenu a::before { content: ''; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 18px; height: 2px; background: var(--collapse-line); border-radius: 1px; }
-        .collapse-submenu a:hover { background: var(--sidebar-hover-bg); border-left: none !important; }
-        .collapse-submenu a.sub-item-active { background: var(--sub-item-active-bg); font-weight: 600; color: #1e3c72; border-radius: 0 8px 8px 0; }
-        .collapse-submenu-2 { position: relative; }
-        .collapse-submenu-2::before { content: ''; position: absolute; left: 35px; top: 4px; bottom: 4px; width: 2px; background: repeating-linear-gradient(to bottom, #94a3b8 0px, #94a3b8 4px, transparent 4px, transparent 8px); }
-        .collapse-submenu-2 a { padding-left: 62px !important; font-size: 0.88rem !important; position: relative; }
-        .collapse-submenu-2 a::before { content: ''; position: absolute; left: 35px; top: 50%; transform: translateY(-50%); width: 20px; height: 0; border-top: 2px dashed var(--collapse-dash); }
-        .collapse-submenu-2 a:hover { background: var(--sidebar-hover-bg); }
-        .sub-item-active { color: var(--sidebar-accent) !important; font-weight: 600; background-color: #f8fafc !important; border-left: 3px solid #2a5298; border-radius: 0 8px 8px 0; }
-        .collapse-toggle { display: flex; justify-content: space-between; align-items: center; }
-        .collapse-toggle .chevron-icon { font-size: 0.8rem; transition: transform 0.2s ease; }
-        .collapse-toggle[aria-expanded="true"] .chevron-icon { transform: rotate(180deg); }
-
-        .main-content { margin-left: 260px; min-height: 100vh; }
-
-        .topbar {
+.sidebar { display: flex; flex-direction: column; width: 260px; height: 100vh; position: fixed; background: var(--sidebar-bg); box-shadow: 4px 0 20px rgba(0,0,0,0.03); z-index: 1000; }
+.sidebar-brand { flex-shrink: 0; background: var(--sidebar-brand-bg); color: #ffffff; padding: 20px; font-size: 1.3rem; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
+.sidebar-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px 10px; }
+.sidebar-menu::-webkit-scrollbar { width: 4px; }
+.sidebar-menu::-webkit-scrollbar-track { background: transparent; }
+.sidebar-menu::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
+.sidebar-menu::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+.sidebar-menu a { display: flex; align-items: center; color: var(--sidebar-text); text-decoration: none; padding: 12px 15px; font-size: 0.95rem; border-radius: 8px; margin-bottom: 5px; transition: all 0.25s ease; cursor: pointer; border-left: 3px solid transparent; }
+.sidebar-menu a i { font-size: 1.1rem; margin-right: 12px; width: 25px; text-align: center; }
+.sidebar-menu a:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-accent); border-left-color: #1e3c72; }
+.sidebar-menu a.active { background: var(--sidebar-active-bg); color: var(--sidebar-accent); font-weight: 700; border-left: 4px solid var(--sidebar-accent); box-shadow: inset 0 0 0 1px rgba(30,60,114,0.06); }
+.collapse-submenu { position: relative; }
+.collapse-submenu::before { content: ''; position: absolute; left: 22px; top: 4px; bottom: 4px; width: 2px; background: var(--collapse-line); border-radius: 2px; }
+.collapse-submenu a { padding-left: 45px !important; font-size: 0.9rem !important; position: relative; border-left: none !important; }
+.collapse-submenu a::before { content: ''; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 18px; height: 2px; background: var(--collapse-line); border-radius: 1px; }
+.collapse-submenu a:hover { background: var(--sidebar-hover-bg); border-left: none !important; }
+.collapse-submenu a.sub-item-active { background: var(--sub-item-active-bg); font-weight: 600; color: #1e3c72; border-radius: 0 8px 8px 0; }
+.collapse-submenu-2 { position: relative; }
+.collapse-submenu-2::before { content: ''; position: absolute; left: 35px; top: 4px; bottom: 4px; width: 2px; background: repeating-linear-gradient(to bottom, #94a3b8 0px, #94a3b8 4px, transparent 4px, transparent 8px); }
+.collapse-submenu-2 a { padding-left: 62px !important; font-size: 0.88rem !important; position: relative; }
+.collapse-submenu-2 a::before { content: ''; position: absolute; left: 35px; top: 50%; transform: translateY(-50%); width: 20px; height: 0; border-top: 2px dashed var(--collapse-dash); }
+.collapse-submenu-2 a:hover { background: var(--sidebar-hover-bg); }
+.sub-item-active { color: var(--sidebar-accent) !important; font-weight: 600; background-color: #f8fafc !important; border-left: 3px solid #2a5298; border-radius: 0 8px 8px 0; }
+.collapse-toggle { display: flex; justify-content: space-between; align-items: center; }
+.collapse-toggle .chevron-icon { font-size: 0.8rem; transition: transform 0.2s ease; }
+.collapse-toggle[aria-expanded="true"] .chevron-icon { transform: rotate(180deg); }
+.main-content { margin-left: 260px; min-height: 100vh; }
+.topbar {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -153,14 +151,12 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
             top: 0;
             z-index: 999;
         }
-
-        .topbar-title {
+.topbar-title {
             font-size: 1.2rem;
             font-weight: 600;
             color: #1e3c72;
         }
-
-        .user-profile {
+.user-profile {
             display: flex;
             align-items: center;
             background: var(--profile-bg);
@@ -169,8 +165,7 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
             font-size: 0.9rem;
             color: var(--profile-text);
         }
-
-        .panel-custom {
+.panel-custom {
             border: none;
             border-radius: 12px;
             background: #ffffff;
@@ -178,8 +173,7 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
             margin-bottom: 30px;
             animation: fadeInUp 0.5s ease-in-out;
         }
-
-        .panel-custom-header {
+.panel-custom-header {
             padding: 20px;
             font-size: 1.05rem;
             font-weight: 600;
@@ -191,19 +185,17 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
             justify-content: space-between;
             align-items: center;
         }
-
-        @keyframes fadeInUp {
+@keyframes fadeInUp {
             from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .topbar-widgets { display: flex; align-items: center; gap: 12px; }
-        .widget-box { padding: 6px 14px; border-radius: 20px; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
-        .widget-time { background: #e0f2fe; color: #0369a1; }
-        .widget-weather { background: #fef3c7; color: #d97706; }
-        .widget-date { background: #dcfce7; color: #15803d; }
-    
+.topbar-widgets { display: flex; align-items: center; gap: 12px; }
+.widget-box { padding: 6px 14px; border-radius: 20px; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+.widget-time { background: #e0f2fe; color: #0369a1; }
+.widget-weather { background: #fef3c7; color: #d97706; }
+.widget-date { background: #dcfce7; color: #15803d; }
 /* ==========================================================
-   CORRECCI�N DEL AVATAR Y PERFIL EN EL TOPBAR
+   CORRECCIÓN DEL AVATAR Y PERFIL EN EL TOPBAR
    ========================================================== */
 .profile-avatar-wrap { flex-shrink: 0; margin-right: 10px; display: flex; align-items: center; }
 .profile-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
@@ -211,9 +203,8 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
 .profile-info { display: flex; flex-direction: column; line-height: 1.2; }
 .profile-name { font-size: 0.88rem; white-space: nowrap; }
 .profile-role { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; white-space: nowrap; }
-
 /* ========================================================
-   SUBMEN�S COMPACTOS ESTILO ERP (Ultra-compacto y premium)
+   SUBMEN°S COMPACTOS ESTILO ERP (Ultra-compacto y premium)
    ======================================================== */
 .submenu-level-1, .submenu-level-2 { overflow: hidden; transition: all 0.15s ease-in-out; margin: 0; padding: 0; list-style: none; }
 .submenu-level-1 { border-left: 2px solid #cbd5e1; margin-left: 14px; padding-left: 0; }
@@ -226,8 +217,6 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
 .submenu-level-2 > a i, .submenu-level-2 > li > a i { font-size: 0.90rem; margin-right: 6px; width: 16px; text-align: center; }
 .submenu-level-2 > a:hover, .submenu-level-2 > li > a:hover { background-color: rgba(0, 0, 0, 0.03); color: #2a5298; }
 .submenu-level-2 > a.active, .submenu-level-2 > li > a.active { background-color: rgba(42, 82, 152, 0.04); color: #2a5298; font-weight: 500; }
-
-    
 /* ========================================================
    SIDEBAR TOGGLE (HAMBURGER MENU)
    ======================================================== */
@@ -243,7 +232,6 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
 .sidebar.collapsed .collapse-toggle .chevron-icon { display: none; }
 .sidebar.collapsed .collapse-submenu, .sidebar.collapsed .collapse-submenu-2 { display: none !important; }
 .sidebar.collapsed ~ .main-content { margin-left: 70px; }
-
     </style>
 </head>
 <body>
@@ -254,11 +242,11 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
 
     <div class="topbar">
         <div class="topbar-title">
-            <i class="bi bi-tags me-2"></i> Organizaci�n de Cat�logo
+            <i class="bi bi-tags me-2"></i> Organización de Catálogo
         </div>
         <div class="topbar-widgets">
             <div class="widget-box widget-time"><i class="bi bi-clock-fill me-2"></i> <span id="live-clock">00:00:00</span></div>
-            <div class="widget-box widget-weather"><i class="bi bi-sun-fill me-2"></i> <span>17�C</span></div>
+            <div class="widget-box widget-weather"><i class="bi bi-sun-fill me-2"></i> <span>17°C</span></div>
             <div class="widget-box widget-date"><i class="bi bi-calendar-event-fill me-2"></i> <span id="live-date">--/--/----</span></div>
             <div class="user-profile shadow-sm">
     <div class="profile-avatar-wrap"><?php if(!empty($_SESSION["imagen"])): ?><img src="../assets/uploads/usuarios/<?php echo $_SESSION["imagen"]; ?>" class="profile-avatar"><?php else: ?><div class="profile-avatar-inicial"><?php echo strtoupper(substr($_SESSION["nombre"],0,1)); ?></div><?php endif; ?></div>
@@ -274,22 +262,22 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
 
         <?php if(isset($_GET['msg']) && $_GET['msg'] == 'updated'){ ?>
             <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mb-4" role="alert" style="border-left: 5px solid #2ecc71 !important;">
-                <i class="bi bi-check-circle-fill me-2"></i> �Categor�a actualizada correctamente!
+                <i class="bi bi-check-circle-fill me-2"></i> ¡Categoría actualizada correctamente!
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php } ?>
 
         <?php if(isset($_GET['msg']) && $_GET['msg'] == 'deleted'){ ?>
             <div class="alert alert-warning alert-dismissible fade show shadow-sm border-0 mb-4" role="alert" style="border-left: 5px solid #f1c40f !important;">
-                <i class="bi bi-trash-fill me-2"></i> Categor�a eliminada del cat�logo.
+                <i class="bi bi-trash-fill me-2"></i> Categoría eliminada del catálogo.
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php } ?>
 
         <div class="panel-custom shadow-sm">
             <div class="panel-custom-header">
-                <i class="bi bi-table me-2"></i> <span class="menu-text"> Categor�as Registradas</span>
-                <!-- Nueva Categor�a est� en el sidebar -->
+                <i class="bi bi-table me-2"></i> <span class="menu-text"> Categorías Registradas</span>
+                <!-- Nueva Categoría está en el sidebar -->
             </div>
             <div class="panel-custom-body p-4">
                 <div class="table-responsive">
@@ -297,8 +285,8 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
                         <thead>
                             <tr class="table-light">
                                 <th>ID</th>
-                                <th>Nombre de Categor�a</th>
-                                <th>Descripci�n</th>
+                                <th>Nombre de Categoría</th>
+                                <th>Descripción</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
@@ -336,24 +324,24 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border: none; border-radius: 12px;">
       <div class="modal-header text-white" style="background: var(--panel-header-bg); border-top-left-radius: 12px; border-top-right-radius: 12px;">
-        <h5 class="modal-title"><i class="bi bi-plus-circle-fill me-2"></i>A�adir Nueva Categor�a</h5>
+        <h5 class="modal-title"><i class="bi bi-plus-circle-fill me-2"></i>Añadir Nueva Categoría</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form method="POST">
         <input type="hidden" name="csrf_token" value="<?php echo generarCsrf(); ?>">
         <div class="modal-body p-4">
             <div class="mb-3">
-                <label class="form-label fw-bold">Nombre de Categor�a</label>
+                <label class="form-label fw-bold">Nombre de Categoría</label>
                 <input type="text" name="nombre_categoria" class="form-control" placeholder="Ej. Literatura Infantil" required>
             </div>
             <div class="mb-3">
-                <label class="form-label fw-bold">Descripci�n breve</label>
-                <textarea name="descripcion" class="form-control" rows="3" placeholder="Detalles de la categor�a..." required></textarea>
+                <label class="form-label fw-bold">Descripción breve</label>
+                <textarea name="descripcion" class="form-control" rows="3" placeholder="Detalles de la categoría..." required></textarea>
             </div>
         </div>
         <div class="modal-footer bg-light" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" name="guardar" class="btn btn-primary px-4" style="background: #1e3c72; border: none;">Guardar Categor�a</button>
+            <button type="submit" name="guardar" class="btn btn-primary px-4" style="background: #1e3c72; border: none;">Guardar Categoría</button>
         </div>
       </form>
     </div>
@@ -364,7 +352,7 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border: none; border-radius: 12px;">
       <div class="modal-header text-white" style="background: linear-gradient(135deg, #e67e22, #d35400); border-top-left-radius: 12px; border-top-right-radius: 12px;">
-        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Modificar Categor�a</h5>
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Modificar Categoría</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form method="POST">
@@ -373,11 +361,11 @@ $categorias = mysqli_query($conexion, "SELECT * FROM categorias WHERE activo=1")
             <input type="hidden" name="id_categoria" id="edit_id">
 
             <div class="mb-3">
-                <label class="form-label fw-bold">Nombre de Categor�a</label>
+                <label class="form-label fw-bold">Nombre de Categoría</label>
                 <input type="text" name="nombre_categoria" id="edit_nombre" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label fw-bold">Descripci�n</label>
+                <label class="form-label fw-bold">Descripción</label>
                 <textarea name="descripcion" id="edit_descripcion" class="form-control" rows="3" required></textarea>
             </div>
         </div>

@@ -10,9 +10,11 @@ export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 /* ---------------- formatadores ---------------- */
+/* "Bs" en vez del símbolo de moneda de la API (que en algunos navegadores
+   sale como "BOB" y al ser más largo se cortaba en las tarjetas). */
 export const money = (n) =>
-  Number(n || 0).toLocaleString("es-BO", {
-    style: "currency", currency: "BOB", minimumFractionDigits: 2,
+  "Bs " + Number(n || 0).toLocaleString("es-BO", {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
   });
 
 export const moneyCorto = (n) => {
@@ -106,9 +108,14 @@ export async function signOut() {
 }
 
 export async function perfilActual() {
-  const { data: auth } = await sb.auth.getUser();
+  console.log('[LSM] perfilActual called');
+  const { data: auth, error: authError } = await sb.auth.getUser();
+  console.log('[LSM] perfilActual - getUser result:', auth?.user ? 'user exists' : 'no user', authError ? authError.message : 'no error');
+  if (authError) console.error('[LSM] perfilActual - auth error:', authError);
   if (!auth?.user) return null;
-  const { data } = await sb.from("perfiles").select("*").eq("id", auth.user.id).maybeSingle();
+  const { data, error: perfilError } = await sb.from("perfiles").select("*").eq("id", auth.user.id).maybeSingle();
+  console.log('[LSM] perfilActual - perfiles query:', data ? 'found' : 'not found', perfilError ? perfilError.message : 'no error');
+  if (perfilError) console.error('[LSM] perfilActual - perfiles error:', perfilError);
   const legacy = (data?.usuario_id ?? null);
   let nombre = data?.nombre || usuarioDeCorreo(auth.user.email);
   return {

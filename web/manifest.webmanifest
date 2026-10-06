@@ -15,9 +15,9 @@
     { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "shortcuts": [
-    { "name": "Nueva venta", "short_name": "Venta", "url": "/movil.html#ventas/pos" },
-    { "name": "Caja", "short_name": "Caja", "url": "/movil.html#ventas/caja" },
-    { "name": "Inventario", "short_name": "Stock", "url": "/movil.html#inventario" },
-    { "name": "Reportes", "short_name": "Reportes", "url": "/movil.html#reportes" }
+    { "name": "Hacer una venta", "short_name": "Vender", "url": "/movil.html#ventas/pos" },
+    { "name": "Abrir o cerrar la caja", "short_name": "Caja", "url": "/movil.html#ventas/caja" },
+    { "name": "Ver los productos", "short_name": "Productos", "url": "/movil.html#inventario/listado" },
+    { "name": "Los clientes", "short_name": "Clientes", "url": "/movil.html#clientes/lista" }
   ]
 }

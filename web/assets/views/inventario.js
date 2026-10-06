@@ -7,6 +7,10 @@ export const meta = { id: "inventario", titulo: "Productos & Inventario", icono:
 let tab = "listado";
 let filtro = { texto: "", vista: "todos", cat: "" };
 
+export function abrir(params = {}) {
+  if (params.tab) tab = params.tab;
+}
+
 export function render() {
   return `
   <div class="fade space-y-4">

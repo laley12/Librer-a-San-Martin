@@ -8,7 +8,7 @@ export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) =>
-    ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "'" }[c]));
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
 /* ---------------- Toast ---------------- */
@@ -111,14 +111,14 @@ export const kpiCard = ({ label, valor, sub, icono, color = "text-[#1e3c72]", co
   const clickAttr = onClick ? `onclick="${esc(onClick)}"` : "";
   const cursorClass = onClick ? "cursor-pointer" : "";
   return `
-  <div ${clickAttr} class="bg-white ${compacto ? "rounded-2xl p-3.5" : "rounded-xl border border-slate-200 p-5"} shadow-sm ${cursorClass} transition-all duration-200 hover:shadow-md hover:border-blue-300 group">
+  <div ${clickAttr} class="bg-white ${compacto ? "rounded-2xl p-3.5" : "rounded-xl border border-slate-200 p-3.5 md:p-5"} shadow-sm ${cursorClass} transition-all duration-200 hover:shadow-md hover:border-blue-300 group">
     <div class="flex items-start justify-between gap-2">
-      <div class="min-w-0">
+      <div class="min-w-0 flex-1">
         <div class="text-[10px] md:text-xs uppercase tracking-wide text-slate-400">${label}</div>
-        <div class="${compacto ? "text-lg" : "text-2xl"} font-bold mt-1 ${color} truncate">${valor}</div>
+        <div class="${compacto ? "text-lg sm:text-xl" : "text-lg sm:text-xl md:text-2xl"} font-bold mt-1 ${color} leading-tight break-words">${valor}</div>
         ${sub ? `<div class="text-[10px] md:text-xs text-slate-400 mt-0.5 truncate">${sub}</div>` : ""}
       </div>
-      ${svg ? `<div class="${compacto ? "p-2" : "p-3"} ${iconBg} rounded-lg group-hover:${hoverIconBg} group-hover:${hoverIconColor} transition-colors shrink-0">${svg}</div>` : ""}
+      ${svg ? `<div class="${compacto ? "p-2" : "p-2.5"} ${iconBg} rounded-lg group-hover:${hoverIconBg} group-hover:${hoverIconColor} transition-colors shrink-0">${svg}</div>` : ""}
     </div>
   </div>`;
 };

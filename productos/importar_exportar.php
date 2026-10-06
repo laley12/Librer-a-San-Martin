@@ -55,7 +55,7 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
                 $insert = mysqli_query($conexion, "INSERT INTO productos (nombre_producto, descripcion, precio, stock, categoria_id) VALUES ('$nombre', '$descripcion', $precio, $stock, $cat_id)");
                 if($insert){
                     $id_prod = mysqli_insert_id($conexion);
-                    mysqli_query($conexion, "INSERT INTO auditoria_productos (id_usuario, accion) VALUES ($id_usuario, 'Import� producto: $nombre (ID: $id_prod)')");
+                    mysqli_query($conexion, "INSERT INTO auditoria_productos (id_usuario, accion) VALUES ($id_usuario, 'Importó producto: $nombre (ID: $id_prod)')");
                     $contador++;
                 } else {
                     $errores++;
@@ -72,11 +72,12 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Importar / Exportar Productos - Librer�a San Mart�n</title>
+    <title>Importar / Exportar Productos - Librería San Martín</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/includes/base.css">
     <style>
-        :root {
+:root {
             --body-bg: #f0f3f8;
             --sidebar-bg: #ffffff;
             --sidebar-text: #1e293b;
@@ -96,7 +97,7 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
             --collapse-dash: #94a3b8;
             --border-color: rgba(0,0,0,0.05);
         }
-        [data-theme="dark"] {
+[data-theme="dark"] {
             --body-bg: #0f172a;
             --sidebar-bg: #1e293b;
             --sidebar-text: #cbd5e1;
@@ -116,51 +117,49 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
             --collapse-dash: #64748b;
             --border-color: rgba(255,255,255,0.06);
         }
-        body { background: var(--body-bg); font-family: 'Segoe UI', sans-serif; margin: 0; overflow-x: hidden; }
-        .sidebar { display: flex; flex-direction: column; width: 260px; height: 100vh; position: fixed; background: var(--sidebar-bg); box-shadow: 4px 0 20px rgba(0,0,0,0.03); z-index: 1000; }
-        .sidebar-brand { flex-shrink: 0; background: var(--sidebar-brand-bg); color: #ffffff; padding: 20px; font-size: 1.3rem; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
-        .sidebar-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px 10px; }
-        .sidebar-menu::-webkit-scrollbar { width: 4px; }
-        .sidebar-menu::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-menu::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
-        .sidebar-menu::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-        .sidebar-menu a { display: flex; align-items: center; color: var(--sidebar-text); text-decoration: none; padding: 12px 15px; font-size: 0.95rem; border-radius: 8px; margin-bottom: 5px; transition: all 0.25s ease; cursor: pointer; border-left: 3px solid transparent; }
-        .sidebar-menu a i { font-size: 1.1rem; margin-right: 12px; width: 25px; text-align: center; }
-        .sidebar-menu a:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-accent); border-left-color: var(--sidebar-accent); }
-        .sidebar-menu a.active { background: var(--sidebar-active-bg); color: var(--sidebar-accent); font-weight: 700; border-left: 4px solid var(--sidebar-accent); box-shadow: inset 0 0 0 1px rgba(30,60,114,0.06); }
-        .collapse-submenu { position: relative; }
-        .collapse-submenu::before { content: ''; position: absolute; left: 22px; top: 4px; bottom: 4px; width: 2px; background: var(--collapse-line); border-radius: 2px; }
-        .collapse-submenu a { padding-left: 45px !important; font-size: 0.9rem !important; position: relative; border-left: none !important; }
-        .collapse-submenu a::before { content: ''; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 18px; height: 2px; background: var(--collapse-line); border-radius: 1px; }
-        .collapse-submenu a:hover { background: var(--sidebar-hover-bg); border-left: none !important; }
-        .collapse-submenu a.sub-item-active { background: var(--sub-item-active-bg); font-weight: 600; color: var(--sidebar-accent); border-radius: 0 8px 8px 0; }
-        .collapse-submenu-2 { position: relative; }
-        .collapse-submenu-2::before { content: ''; position: absolute; left: 35px; top: 4px; bottom: 4px; width: 2px; background: repeating-linear-gradient(to bottom, #94a3b8 0px, #94a3b8 4px, transparent 4px, transparent 8px); }
-        .collapse-submenu-2 a { padding-left: 62px !important; font-size: 0.88rem !important; position: relative; }
-        .collapse-submenu-2 a::before { content: ''; position: absolute; left: 35px; top: 50%; transform: translateY(-50%); width: 20px; height: 0; border-top: 2px dashed var(--collapse-dash); }
-        .collapse-submenu-2 a:hover { background: var(--sidebar-hover-bg); }
-        .sub-item-active { color: var(--sidebar-accent) !important; font-weight: 600; background-color: #f8fafc !important; border-left: 3px solid #2a5298; border-radius: 0 8px 8px 0; }
-        .collapse-toggle { display: flex; justify-content: space-between; align-items: center; }
-        .collapse-toggle .chevron-icon { font-size: 0.8rem; transition: transform 0.2s ease; }
-        .collapse-toggle[aria-expanded="true"] .chevron-icon { transform: rotate(180deg); }
-
-        .main-content { margin-left: 260px; min-height: 100vh; }
-        .content-wrap { max-width: 1200px; margin: 0 auto; }
-        .topbar { background: var(--topbar-bg); backdrop-filter: blur(10px); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
-        .topbar-title { font-size: 1.2rem; font-weight: 600; color: #1e3c72; }
-        .topbar-widgets { display: flex; align-items: center; gap: 12px; }
-        .widget-box { padding: 6px 14px; border-radius: 20px; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
-        .widget-time { background: #e0f2fe; color: #0369a1; }
-        .widget-date { background: #dcfce7; color: #15803d; }
-        .user-profile { display: flex; align-items: center; background: var(--profile-bg); padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; color: var(--profile-text); }
-        .panel-custom { border: none; border-radius: 12px; background: var(--panel-bg); box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 30px; animation: fadeInUp 0.5s ease-in-out; }
-        .panel-custom-header { padding: 20px; font-size: 1.05rem; font-weight: 600; color: #ffffff; border-top-left-radius: 12px; border-top-right-radius: 12px; background: var(--panel-header-bg); display: flex; justify-content: space-between; align-items: center; }
-        .import-export-card { border: 2px dashed #e2e8f0; border-radius: 16px; padding: 40px; text-align: center; background: #fafbfc; transition: all 0.25s ease; }
-        .import-export-card:hover { border-color: #2a5298; background: #f8fafc; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-    
+body { background: var(--body-bg); font-family: 'Segoe UI', sans-serif; margin: 0; overflow-x: hidden; }
+.sidebar { display: flex; flex-direction: column; width: 260px; height: 100vh; position: fixed; background: var(--sidebar-bg); box-shadow: 4px 0 20px rgba(0,0,0,0.03); z-index: 1000; }
+.sidebar-brand { flex-shrink: 0; background: var(--sidebar-brand-bg); color: #ffffff; padding: 20px; font-size: 1.3rem; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
+.sidebar-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px 10px; }
+.sidebar-menu::-webkit-scrollbar { width: 4px; }
+.sidebar-menu::-webkit-scrollbar-track { background: transparent; }
+.sidebar-menu::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
+.sidebar-menu::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+.sidebar-menu a { display: flex; align-items: center; color: var(--sidebar-text); text-decoration: none; padding: 12px 15px; font-size: 0.95rem; border-radius: 8px; margin-bottom: 5px; transition: all 0.25s ease; cursor: pointer; border-left: 3px solid transparent; }
+.sidebar-menu a i { font-size: 1.1rem; margin-right: 12px; width: 25px; text-align: center; }
+.sidebar-menu a:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-accent); border-left-color: var(--sidebar-accent); }
+.sidebar-menu a.active { background: var(--sidebar-active-bg); color: var(--sidebar-accent); font-weight: 700; border-left: 4px solid var(--sidebar-accent); box-shadow: inset 0 0 0 1px rgba(30,60,114,0.06); }
+.collapse-submenu { position: relative; }
+.collapse-submenu::before { content: ''; position: absolute; left: 22px; top: 4px; bottom: 4px; width: 2px; background: var(--collapse-line); border-radius: 2px; }
+.collapse-submenu a { padding-left: 45px !important; font-size: 0.9rem !important; position: relative; border-left: none !important; }
+.collapse-submenu a::before { content: ''; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 18px; height: 2px; background: var(--collapse-line); border-radius: 1px; }
+.collapse-submenu a:hover { background: var(--sidebar-hover-bg); border-left: none !important; }
+.collapse-submenu a.sub-item-active { background: var(--sub-item-active-bg); font-weight: 600; color: var(--sidebar-accent); border-radius: 0 8px 8px 0; }
+.collapse-submenu-2 { position: relative; }
+.collapse-submenu-2::before { content: ''; position: absolute; left: 35px; top: 4px; bottom: 4px; width: 2px; background: repeating-linear-gradient(to bottom, #94a3b8 0px, #94a3b8 4px, transparent 4px, transparent 8px); }
+.collapse-submenu-2 a { padding-left: 62px !important; font-size: 0.88rem !important; position: relative; }
+.collapse-submenu-2 a::before { content: ''; position: absolute; left: 35px; top: 50%; transform: translateY(-50%); width: 20px; height: 0; border-top: 2px dashed var(--collapse-dash); }
+.collapse-submenu-2 a:hover { background: var(--sidebar-hover-bg); }
+.sub-item-active { color: var(--sidebar-accent) !important; font-weight: 600; background-color: #f8fafc !important; border-left: 3px solid #2a5298; border-radius: 0 8px 8px 0; }
+.collapse-toggle { display: flex; justify-content: space-between; align-items: center; }
+.collapse-toggle .chevron-icon { font-size: 0.8rem; transition: transform 0.2s ease; }
+.collapse-toggle[aria-expanded="true"] .chevron-icon { transform: rotate(180deg); }
+.main-content { margin-left: 260px; min-height: 100vh; }
+.content-wrap { max-width: 1200px; margin: 0 auto; }
+.topbar { background: var(--topbar-bg); backdrop-filter: blur(10px); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
+.topbar-title { font-size: 1.2rem; font-weight: 600; color: #1e3c72; }
+.topbar-widgets { display: flex; align-items: center; gap: 12px; }
+.widget-box { padding: 6px 14px; border-radius: 20px; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+.widget-time { background: #e0f2fe; color: #0369a1; }
+.widget-date { background: #dcfce7; color: #15803d; }
+.user-profile { display: flex; align-items: center; background: var(--profile-bg); padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; color: var(--profile-text); }
+.panel-custom { border: none; border-radius: 12px; background: var(--panel-bg); box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 30px; animation: fadeInUp 0.5s ease-in-out; }
+.panel-custom-header { padding: 20px; font-size: 1.05rem; font-weight: 600; color: #ffffff; border-top-left-radius: 12px; border-top-right-radius: 12px; background: var(--panel-header-bg); display: flex; justify-content: space-between; align-items: center; }
+.import-export-card { border: 2px dashed #e2e8f0; border-radius: 16px; padding: 40px; text-align: center; background: #fafbfc; transition: all 0.25s ease; }
+.import-export-card:hover { border-color: #2a5298; background: #f8fafc; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 /* ==========================================================
-   CORRECCI�N DEL AVATAR Y PERFIL EN EL TOPBAR
+   CORRECCIÓN DEL AVATAR Y PERFIL EN EL TOPBAR
    ========================================================== */
 .profile-avatar-wrap { flex-shrink: 0; margin-right: 10px; display: flex; align-items: center; }
 .profile-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
@@ -168,9 +167,8 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
 .profile-info { display: flex; flex-direction: column; line-height: 1.2; }
 .profile-name { font-size: 0.88rem; white-space: nowrap; }
 .profile-role { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; white-space: nowrap; }
-
 /* ========================================================
-   SUBMEN�S COMPACTOS ESTILO ERP (Ultra-compacto y premium)
+   SUBMEN°S COMPACTOS ESTILO ERP (Ultra-compacto y premium)
    ======================================================== */
 .submenu-level-1, .submenu-level-2 { overflow: hidden; transition: all 0.15s ease-in-out; margin: 0; padding: 0; list-style: none; }
 .submenu-level-1 { border-left: 2px solid #cbd5e1; margin-left: 14px; padding-left: 0; }
@@ -183,8 +181,6 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
 .submenu-level-2 > a i, .submenu-level-2 > li > a i { font-size: 0.90rem; margin-right: 6px; width: 16px; text-align: center; }
 .submenu-level-2 > a:hover, .submenu-level-2 > li > a:hover { background-color: rgba(0, 0, 0, 0.03); color: #2a5298; }
 .submenu-level-2 > a.active, .submenu-level-2 > li > a.active { background-color: rgba(42, 82, 152, 0.04); color: #2a5298; font-weight: 500; }
-
-    
 /* ========================================================
    SIDEBAR TOGGLE (HAMBURGER MENU)
    ======================================================== */
@@ -200,7 +196,6 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
 .sidebar.collapsed .collapse-toggle .chevron-icon { display: none; }
 .sidebar.collapsed .collapse-submenu, .sidebar.collapsed .collapse-submenu-2 { display: none !important; }
 .sidebar.collapsed ~ .main-content { margin-left: 70px; }
-
     </style>
 </head>
 <body>
@@ -213,7 +208,7 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
         <div class="topbar-widgets">
             <div class="widget-box widget-time"><i class="bi bi-clock-fill me-2"></i> <span id="live-clock">00:00:00</span></div>
             <div class="widget-box widget-date"><i class="bi bi-calendar-event-fill me-2"></i> <span id="live-date">--/--/----</span></div>
-            <div class="widget-box widget-weather"><i class="bi bi-sun-fill me-2"></i> <span>17�C</span></div>
+            <div class="widget-box widget-weather"><i class="bi bi-sun-fill me-2"></i> <span>17°C</span></div>
             <div class="user-profile shadow-sm">
     <div class="profile-avatar-wrap"><?php if(!empty($_SESSION["imagen"])): ?><img src="../assets/uploads/usuarios/<?php echo $_SESSION["imagen"]; ?>" class="profile-avatar"><?php else: ?><div class="profile-avatar-inicial"><?php echo strtoupper(substr($_SESSION["nombre"],0,1)); ?></div><?php endif; ?></div>
     <div class="profile-info">
@@ -236,7 +231,7 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
                         <div class="import-export-card">
                             <i class="bi bi-file-earmark-spreadsheet" style="font-size: 3rem; color: #2a5298;"></i>
                             <h5 class="mt-3 fw-bold">Exportar a CSV</h5>
-                            <p class="text-muted small">Descarga un archivo CSV con todos los productos registrados, incluyendo nombre, descripci�n, precio, stock y categor�a.</p>
+                            <p class="text-muted small">Descarga un archivo CSV con todos los productos registrados, incluyendo nombre, descripción, precio, stock y categoría.</p>
                             <a href="?exportar=csv" class="btn btn-primary px-4 mt-2" style="background: #1e3c72; border: none;">
                                 <i class="bi bi-download me-2"></i> <span class="menu-text">Exportar Ahora
                             </span></a>
@@ -275,11 +270,11 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
                 <p class="mb-2 fw-bold">Estructura esperada (primera fila = encabezados):</p>
                 <div class="bg-light p-3 rounded-3 mb-3">
                     <code class="d-block">nombre_producto,descripcion,precio,stock,nombre_categoria</code>
-                    <code class="d-block">L�piz HB 2B,L�piz de grafito para escritura,2.50,100,�tiles de Escritura</code>
-                    <code class="d-block">Borrador Nata, Borrador blanco para l�piz, 1.50, 200, �tiles de Escritura</code>
+                    <code class="d-block">Lápiz HB 2B,Lápiz de grafito para escritura,2.50,100,Útiles de Escritura</code>
+                    <code class="d-block">Borrador Nata, Borrador blanco para lápiz, 1.50, 200, Útiles de Escritura</code>
                 </div>
                 <div class="alert alert-info py-2 mb-0 small">
-                    <i class="bi bi-lightbulb me-2"></i> La categor�a se busca por nombre. Si no existe, el producto se importar� sin categor�a.
+                    <i class="bi bi-lightbulb me-2"></i> La categoría se busca por nombre. Si no existe, el producto se importará sin categoría.
                 </div>
             </div>
         </div>
@@ -287,67 +282,7 @@ if(isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0){
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    function updateClock() {
-        const now = new Date();
-        document.getElementById('live-clock').textContent = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-        const day = String(now.getDate()).padStart(2, '0');
-        const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-        document.getElementById('live-date').textContent = `${day} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // Dark Mode Toggle
-    (function() {
-        const btn = document.createElement('button');
-        btn.id = 'darkModeToggle';
-        btn.className = 'btn btn-sm btn-outline-secondary rounded-circle ms-2';
-        btn.style.cssText = 'width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid #dee2e6;';
-        btn.setAttribute('title', 'Modo oscuro');
-        const saved = localStorage.getItem('theme');
-        if (window.aplicarTema) { window.aplicarTema(saved || 'light'); }
-        const icon = document.createElement('i');
-        icon.className = saved === 'dark' ? 'bi bi-moon-fill' : saved === 'sepia' ? 'bi bi-brightness-alt-high-fill' : 'bi bi-sun-fill';
-        btn.appendChild(icon);
-        const topbar = document.querySelector('.topbar-widgets') || document.querySelector('.topbar');
-        if (topbar) {
-            const profile = topbar.querySelector('.user-profile');
-            if (profile) profile.parentNode.insertBefore(btn, profile);
-            else topbar.appendChild(btn);
-        }
-        btn.addEventListener('click', function() {
-            if (window.ciclarTema) { window.ciclarTema(); }
-            var cur = document.documentElement.getAttribute('data-theme') || 'light';
-            this.querySelector('i').className = cur === 'dark' ? 'bi bi-moon-fill' : cur === 'sepia' ? 'bi bi-brightness-alt-high-fill' : 'bi bi-sun-fill';
-        });
-    })();
-
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 'n') {
-            e.preventDefault();
-            const modal = document.querySelector('[data-bs-target]');
-            if (modal) {
-                const target = modal.getAttribute('data-bs-target');
-                const el = document.querySelector(target);
-                if (el) { const m = new bootstrap.Modal(el); m.show(); return; }
-            }
-            const nuevo = document.querySelector('a[href*="nuevo.php"]');
-            if (nuevo) { window.location.href = nuevo.getAttribute('href'); }
-        }
-        if (e.ctrlKey && e.key === 'f') {
-            e.preventDefault();
-            const input = document.getElementById('buscador');
-            if (input) input.focus();
-        }
-        if (e.ctrlKey && e.key === 's') {
-            const form = document.querySelector('form');
-            if (form && e.target.closest('form')) { e.preventDefault(); form.querySelector('[type="submit"]')?.click(); }
-        }
-    });
-
-</script>
+    <script src="/includes/base.js"></script>
 </body>
 </html>
 

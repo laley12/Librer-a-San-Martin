@@ -7,6 +7,10 @@ export const meta = { id: "clientes", titulo: "Clientes (CRM)", icono: "👥", g
 let busqueda = "";
 let vista = "lista";
 
+export function abrir(params = {}) {
+  if (params.tab) vista = params.tab;
+}
+
 export function render() {
   return `
   <div class="fade space-y-4">

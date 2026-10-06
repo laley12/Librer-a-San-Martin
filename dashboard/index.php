@@ -164,12 +164,13 @@ unset($datos);
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>Dashboard - Librería San Martín</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/includes/base.css">
     <style>
-        :root {
+:root {
             --body-bg: #f0f3f8;
             --sidebar-bg: #ffffff;
             --sidebar-text: #1e293b;
@@ -184,7 +185,7 @@ unset($datos);
             --profile-text: #333;
             --border-color: rgba(0,0,0,0.05);
         }
-        [data-theme="dark"] {
+[data-theme="dark"] {
             --body-bg: #0f172a;
             --sidebar-bg: #1e293b;
             --sidebar-text: #cbd5e1;
@@ -199,96 +200,97 @@ unset($datos);
             --profile-text: #e2e8f0;
             --border-color: rgba(255,255,255,0.06);
         }
-        html, body { height: 100%; }
-        body { background: var(--body-bg); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; overflow-x: hidden; color: var(--profile-text); }
-        .sidebar { display: flex; flex-direction: column; width: 260px; height: 100vh; position: fixed; top: 0; left: 0; background: var(--sidebar-bg); box-shadow: 4px 0 20px rgba(0,0,0,0.03); z-index: 1000; transition: width 0.3s ease; }
-        .sidebar.collapsed { width: 70px; }
-        .sidebar.collapsed .brand-text, .sidebar.collapsed .sidebar-menu a .menu-text { display: none; }
-        .sidebar.collapsed .sidebar-menu a { justify-content: center; padding: 12px 5px; }
-        .sidebar.collapsed .sidebar-menu a i { margin-right: 0; font-size: 1.3rem; }
-        .sidebar.collapsed .sidebar-brand { font-size: 0; padding: 15px 10px; }
-        .sidebar.collapsed .sidebar-brand .brand-text { font-size: 1.5rem; display: block; }
-        .sidebar-brand { flex-shrink: 0; background: var(--sidebar-brand-bg); color: #ffffff; padding: 20px; font-size: 1.3rem; font-weight: 700; text-align: center; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; }
-        .sidebar-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px 10px; }
-        .sidebar-menu::-webkit-scrollbar { width: 4px; }
-        .sidebar-menu::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-menu::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 10px; }
-        .sidebar-menu a { display: flex; align-items: center; color: var(--sidebar-text); text-decoration: none; padding: 12px 15px; font-size: 0.95rem; border-radius: 8px; margin-bottom: 5px; transition: all 0.25s ease; white-space: nowrap; overflow: hidden; border-left: 3px solid transparent; }
-        .sidebar-menu a i { font-size: 1.1rem; margin-right: 12px; width: 25px; text-align: center; flex-shrink: 0; }
-        .sidebar-menu a:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-accent); border-left-color: var(--sidebar-accent); }
-        .sidebar-menu a.active { background: var(--sidebar-active-bg); color: var(--sidebar-accent); font-weight: 700; border-left: 4px solid var(--sidebar-accent); }
-        .main-content { margin-left: 260px; min-height: 100vh; transition: margin-left 0.3s ease; }
-        .sidebar.collapsed + .main-content { margin-left: 70px; }
-        .topbar { background: var(--topbar-bg); backdrop-filter: blur(10px); padding: 12px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
-        .topbar-left { display: flex; align-items: center; gap: 15px; }
-        .topbar-title { font-size: 1.2rem; font-weight: 600; color: #1e3c72; white-space: nowrap; }
-        [data-theme="dark"] .topbar-title { color: #60a5fa; }
-        .hamburger-btn { background: none; border: none; font-size: 1.6rem; color: var(--sidebar-accent); cursor: pointer; padding: 0 5px; line-height: 1; display: flex; align-items: center; }
-        .hamburger-btn:hover { opacity: 0.7; }
-        .topbar-widgets { display: flex; align-items: center; gap: 15px; }
-        .user-profile { display: flex; align-items: center; background: var(--profile-bg); padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; color: var(--profile-text); }
-        .profile-avatar-inicial { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 10px; font-size: 1rem; flex-shrink: 0; }
-        .profile-avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-right: 10px; flex-shrink: 0; }
-        [data-theme="dark"] .profile-avatar-img { border-color: #334155; }
-        .tab-selector { display: flex; gap: 10px; margin-bottom: 25px; }
-        .tab-btn { padding: 10px 28px; border: 2px solid var(--sidebar-accent); border-radius: 30px; background: transparent; color: var(--sidebar-accent); font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; }
-        .tab-btn:hover { background: rgba(30,60,114,0.08); }
-        .tab-btn.active { background: var(--sidebar-accent); color: #fff; box-shadow: 0 4px 12px rgba(30,60,114,0.3); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; }
-        .quick-card { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 38px 20px; min-height: 180px; background: var(--panel-bg); border-radius: 20px; text-decoration: none; color: var(--profile-text); box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 2px solid var(--border-color); transition: all 0.3s ease; }
-        .quick-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 12px 35px rgba(0,0,0,0.15); color: inherit; }
-        .quick-card .q-icon { font-size: 3.8rem; margin-bottom: 14px; color: var(--sidebar-accent); }
-        .quick-card .q-label { font-size: 1.1rem; font-weight: 700; text-align: center; line-height: 1.3; }
-        .card-stat { border: none; border-radius: 12px; overflow: hidden; display: flex; align-items: center; padding: 25px; transition: all 0.3s ease; text-decoration: none !important; color: white !important; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .card-stat:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-        .card-stat-icon { font-size: 2.5rem; opacity: 0.8; margin-right: 20px; flex-shrink: 0; }
-        .card-stat-body h5 { margin: 0; font-size: 1rem; opacity: 0.9; }
-        .card-stat-title { font-size: 1.8rem; font-weight: 700; margin-top: 5px; }
-        .stat-productos { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
-        .stat-ventas { background: linear-gradient(135deg, #10b981, #047857); }
-        .stat-proveedores { background: linear-gradient(135deg, #8b5cf6, #5b21b6); }
-        .stat-compras { background: linear-gradient(135deg, #f59e0b, #b45309); }
-        .widget-pill { padding: 6px 16px; border-radius: 30px; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .widget-time { background-color: #e0f2fe; color: #0284c7; }
-        .widget-weather { background-color: #fef3c7; color: #d97706; }
-        .widget-date { background-color: #dcfce7; color: #166534; }
-        [data-theme="dark"] .widget-time { background-color: rgba(2, 132, 199, 0.2); color: #7dd3fc; }
-        [data-theme="dark"] .widget-weather { background-color: rgba(217, 119, 6, 0.2); color: #fcd34d; }
-        [data-theme="dark"] .widget-date { background-color: rgba(22, 101, 52, 0.2); color: #86efac; }
-        .panel-custom { border: none; border-radius: 12px; background: var(--panel-bg); box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 30px; }
-        .panel-custom-header { padding: 20px; font-size: 1.05rem; font-weight: 600; color: #ffffff; border-top-left-radius: 12px; border-top-right-radius: 12px; background: var(--panel-header-bg); }
-        [data-theme="dark"] .table { color: var(--profile-text); }
-        [data-theme="dark"] .table-light th { background-color: #334155 !important; color: #f1f5f9; border-color: var(--border-color); }
-        [data-theme="dark"] .table td { border-color: var(--border-color); }
-        [data-theme="dark"] .table-hover tbody tr:hover { background-color: #334155; color: #fff; }
-        .day-card { border-radius: 16px; padding: 20px; color: #fff; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-        .day-card-icon { font-size: 2.5rem; opacity: 0.9; }
-        .day-card h4 { margin: 0; font-weight: 300; font-size: 0.9rem; opacity: 0.9; }
-        .day-card .amount { font-size: 1.8rem; font-weight: 800; }
-        .day-card .count-label { font-size: 0.8rem; opacity: 0.8; }
-        .day-hoy { background: linear-gradient(135deg, #1e3c72, #2a5298); }
-        .day-ayer { background: linear-gradient(135deg, #64748b, #475569); }
-        .trend-up { color: #10b981; }
-        .trend-down { color: #ef4444; }
-        canvas { max-width: 100%; }
-        /* Analytics stat cards */
+html, body { height: 100%; }
+body { background: var(--body-bg); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; overflow-x: hidden; color: var(--profile-text); }
+.sidebar { display: flex; flex-direction: column; width: 260px; height: 100vh; position: fixed; top: 0; left: 0; background: var(--sidebar-bg); box-shadow: 4px 0 20px rgba(0,0,0,0.03); z-index: 1000; transition: width 0.3s ease; }
+.sidebar.collapsed { width: 70px; }
+.sidebar.collapsed .brand-text, .sidebar.collapsed .sidebar-menu a .menu-text { display: none; }
+.sidebar.collapsed .sidebar-menu a { justify-content: center; padding: 12px 5px; }
+.sidebar.collapsed .sidebar-menu a i { margin-right: 0; font-size: 1.3rem; }
+.sidebar.collapsed .sidebar-brand { font-size: 0; padding: 15px 10px; }
+.sidebar.collapsed .sidebar-brand .brand-text { font-size: 1.5rem; display: block; }
+.sidebar-brand { flex-shrink: 0; background: var(--sidebar-brand-bg); color: #ffffff; padding: 20px; font-size: 1.3rem; font-weight: 700; text-align: center; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; }
+.sidebar-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px 10px; }
+.sidebar-menu::-webkit-scrollbar { width: 4px; }
+.sidebar-menu::-webkit-scrollbar-track { background: transparent; }
+.sidebar-menu::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 10px; }
+.sidebar-menu a { display: flex; align-items: center; color: var(--sidebar-text); text-decoration: none; padding: 12px 15px; font-size: 0.95rem; border-radius: 8px; margin-bottom: 5px; transition: all 0.25s ease; white-space: nowrap; overflow: hidden; border-left: 3px solid transparent; }
+.sidebar-menu a i { font-size: 1.1rem; margin-right: 12px; width: 25px; text-align: center; flex-shrink: 0; }
+.sidebar-menu a:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-accent); border-left-color: var(--sidebar-accent); }
+.sidebar-menu a.active { background: var(--sidebar-active-bg); color: var(--sidebar-accent); font-weight: 700; border-left: 4px solid var(--sidebar-accent); }
+.main-content { margin-left: 260px; min-height: 100vh; transition: margin-left 0.3s ease; }
+.sidebar.collapsed + .main-content { margin-left: 70px; }
+.topbar { background: var(--topbar-bg); backdrop-filter: blur(10px); padding: 12px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
+.topbar-left { display: flex; align-items: center; gap: 15px; }
+.topbar-title { font-size: 1.2rem; font-weight: 600; color: #1e3c72; white-space: nowrap; }
+[data-theme="dark"] .topbar-title { color: #60a5fa; }
+.hamburger-btn { background: none; border: none; font-size: 1.6rem; color: var(--sidebar-accent); cursor: pointer; padding: 0 5px; line-height: 1; display: flex; align-items: center; }
+.hamburger-btn:hover { opacity: 0.7; }
+.topbar-widgets { display: flex; align-items: center; gap: 15px; }
+.user-profile { display: flex; align-items: center; background: var(--profile-bg); padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; color: var(--profile-text); }
+.profile-avatar-inicial { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 10px; font-size: 1rem; flex-shrink: 0; }
+.profile-avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-right: 10px; flex-shrink: 0; }
+[data-theme="dark"] .profile-avatar-img { border-color: #334155; }
+.tab-selector { display: flex; gap: 10px; margin-bottom: 25px; }
+.tab-btn { padding: 10px 28px; border: 2px solid var(--sidebar-accent); border-radius: 30px; background: transparent; color: var(--sidebar-accent); font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; }
+.tab-btn:hover { background: rgba(30,60,114,0.08); }
+.tab-btn.active { background: var(--sidebar-accent); color: #fff; box-shadow: 0 4px 12px rgba(30,60,114,0.3); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; }
+.quick-card { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 38px 20px; min-height: 180px; background: var(--panel-bg); border-radius: 20px; text-decoration: none; color: var(--profile-text); box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 2px solid var(--border-color); transition: all 0.3s ease; }
+.quick-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 12px 35px rgba(0,0,0,0.15); color: inherit; }
+.quick-card .q-icon { font-size: 3.8rem; margin-bottom: 14px; color: var(--sidebar-accent); }
+.quick-card .q-label { font-size: 1.1rem; font-weight: 700; text-align: center; line-height: 1.3; }
+.card-stat { border: none; border-radius: 12px; overflow: hidden; display: flex; align-items: center; padding: 25px; transition: all 0.3s ease; text-decoration: none !important; color: white !important; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+.card-stat:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+.card-stat-icon { font-size: 2.5rem; opacity: 0.8; margin-right: 20px; flex-shrink: 0; }
+.card-stat-body h5 { margin: 0; font-size: 1rem; opacity: 0.9; }
+.card-stat-title { font-size: 1.8rem; font-weight: 700; margin-top: 5px; }
+.stat-productos { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.stat-ventas { background: linear-gradient(135deg, #10b981, #047857); }
+.stat-proveedores { background: linear-gradient(135deg, #8b5cf6, #5b21b6); }
+.stat-compras { background: linear-gradient(135deg, #f59e0b, #b45309); }
+.widget-pill { padding: 6px 16px; border-radius: 30px; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.widget-time { background-color: #e0f2fe; color: #0284c7; }
+.widget-weather { background-color: #fef3c7; color: #d97706; }
+.widget-date { background-color: #dcfce7; color: #166534; }
+[data-theme="dark"] .widget-time { background-color: rgba(2, 132, 199, 0.2); color: #7dd3fc; }
+[data-theme="dark"] .widget-weather { background-color: rgba(217, 119, 6, 0.2); color: #fcd34d; }
+[data-theme="dark"] .widget-date { background-color: rgba(22, 101, 52, 0.2); color: #86efac; }
+.panel-custom { border: none; border-radius: 12px; background: var(--panel-bg); box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 30px; }
+.panel-custom-header { padding: 20px; font-size: 1.05rem; font-weight: 600; color: #ffffff; border-top-left-radius: 12px; border-top-right-radius: 12px; background: var(--panel-header-bg); }
+[data-theme="dark"] .table { color: var(--profile-text); }
+[data-theme="dark"] .table-light th { background-color: #334155 !important; color: #f1f5f9; border-color: var(--border-color); }
+[data-theme="dark"] .table td { border-color: var(--border-color); }
+[data-theme="dark"] .table-hover tbody tr:hover { background-color: #334155; color: #fff; }
+.day-card { border-radius: 16px; padding: 20px; color: #fff; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+.day-card-icon { font-size: 2.5rem; opacity: 0.9; }
+.day-card h4 { margin: 0; font-weight: 300; font-size: 0.9rem; opacity: 0.9; }
+.day-card .amount { font-size: 1.8rem; font-weight: 800; }
+.day-card .count-label { font-size: 0.8rem; opacity: 0.8; }
+.day-hoy { background: linear-gradient(135deg, #1e3c72, #2a5298); }
+.day-ayer { background: linear-gradient(135deg, #64748b, #475569); }
+.trend-up { color: #10b981; }
+.trend-down { color: #ef4444; }
+canvas { max-width: 100%; height: auto !important; }
+html, body { overflow-x: hidden; }
+/* Analytics stat cards */
         .analytics-stat { display:flex;align-items:center;gap:15px;background:var(--panel-bg);border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.04);border:1px solid var(--border-color);transition:all 0.3s ease; }
-        .analytics-stat:hover { transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.08); }
-        .analytics-stat .as-icon { width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#fff;flex-shrink:0; }
-        .analytics-stat .as-icon.blue { background:linear-gradient(135deg,#3b82f6,#1d4ed8); }
-        .analytics-stat .as-icon.green { background:linear-gradient(135deg,#10b981,#047857); }
-        .analytics-stat .as-icon.purple { background:linear-gradient(135deg,#8b5cf6,#5b21b6); }
-        .analytics-stat .as-icon.orange { background:linear-gradient(135deg,#f59e0b,#b45309); }
-        .analytics-stat .as-icon.teal { background:linear-gradient(135deg,#14b8a6,#0f766e); }
-        .analytics-stat .as-body { flex:1;min-width:0; }
-        .analytics-stat .as-label { font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7;margin-bottom:2px; }
-        .analytics-stat .as-value { font-size:1.25rem;font-weight:700;line-height:1.2; }
-        .analytics-stat .as-compare { font-size:0.75rem;margin-top:2px; }
-        .analytics-stat .as-compare.up { color:#10b981; }
-        .analytics-stat .as-compare.down { color:#ef4444; }
-        .analytics-stat .as-monto { font-size:0.85rem;font-weight:600;margin-top:2px;color:var(--sidebar-accent); }
+.analytics-stat:hover { transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.08); }
+.analytics-stat .as-icon { width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#fff;flex-shrink:0; }
+.analytics-stat .as-icon.blue { background:linear-gradient(135deg,#3b82f6,#1d4ed8); }
+.analytics-stat .as-icon.green { background:linear-gradient(135deg,#10b981,#047857); }
+.analytics-stat .as-icon.purple { background:linear-gradient(135deg,#8b5cf6,#5b21b6); }
+.analytics-stat .as-icon.orange { background:linear-gradient(135deg,#f59e0b,#b45309); }
+.analytics-stat .as-icon.teal { background:linear-gradient(135deg,#14b8a6,#0f766e); }
+.analytics-stat .as-body { flex:1;min-width:0; }
+.analytics-stat .as-label { font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7;margin-bottom:2px; }
+.analytics-stat .as-value { font-size:1.25rem;font-weight:700;line-height:1.2; }
+.analytics-stat .as-compare { font-size:0.75rem;margin-top:2px; }
+.analytics-stat .as-compare.up { color:#10b981; }
+.analytics-stat .as-compare.down { color:#ef4444; }
+.analytics-stat .as-monto { font-size:0.85rem;font-weight:600;margin-top:2px;color:var(--sidebar-accent); }
     </style>
 </head>
 <body>
@@ -327,25 +329,25 @@ unset($datos);
     <div class="container-fluid p-4">
         <!-- Summary cards row -->
         <div class="row g-4 mb-4">
-            <div class="col-md-3 col-6">
+            <div class="col-12 col-sm-6 col-lg-3">
                 <a href="../productos/index.php" class="card-stat stat-productos">
                     <div class="card-stat-icon"><i class="bi bi-book-half"></i></div>
                     <div class="card-stat-body"><h5>Productos</h5><div class="card-stat-title"><?php echo $tot_productos; ?></div></div>
                 </a>
             </div>
-            <div class="col-md-3 col-6">
+            <div class="col-12 col-sm-6 col-lg-3">
                 <a href="../ventas/index.php" class="card-stat stat-ventas">
                     <div class="card-stat-icon"><i class="bi bi-cash-stack"></i></div>
                     <div class="card-stat-body"><h5>Ventas</h5><div class="card-stat-title"><?php echo $tot_ventas_cant; ?></div></div>
                 </a>
             </div>
-            <div class="col-md-3 col-6">
+            <div class="col-12 col-sm-6 col-lg-3">
                 <a href="../proveedores/index.php" class="card-stat stat-proveedores">
                     <div class="card-stat-icon"><i class="bi bi-truck-flatbed"></i></div>
                     <div class="card-stat-body"><h5>Proveedores</h5><div class="card-stat-title"><?php echo $tot_proveedores; ?></div></div>
                 </a>
             </div>
-            <div class="col-md-3 col-6">
+            <div class="col-12 col-sm-6 col-lg-3">
                 <a href="../compras/index.php" class="card-stat stat-compras">
                     <div class="card-stat-icon"><i class="bi bi-bag-plus-fill"></i></div>
                     <div class="card-stat-body"><h5>Compras</h5><div class="card-stat-title"><?php echo $tot_compras; ?></div></div>
@@ -355,7 +357,7 @@ unset($datos);
 
         <!-- Hoy vs Ayer -->
         <div class="row g-4 mb-4">
-            <div class="col-md-6">
+            <div class="col-12 col-md-6 mb-3 mb-md-0">
                 <div class="day-card day-hoy">
                     <div class="day-card-icon"><i class="bi bi-calendar-check-fill"></i></div>
                     <div>
@@ -365,7 +367,7 @@ unset($datos);
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-12 col-md-6">
                 <div class="day-card day-ayer">
                     <div class="day-card-icon"><i class="bi bi-calendar-fill"></i></div>
                     <div>
@@ -388,7 +390,7 @@ unset($datos);
         <div class="tab-content active" id="dashboard-tab">
             <!-- Rápida + Stock bajo row -->
             <div class="row g-4 mb-4">
-                <div class="col-lg-8">
+                <div class="col-12 col-lg-8">
                     <div class="panel-custom">
                         <div class="panel-custom-header"><i class="bi bi-lightning-fill me-2 text-warning"></i> Accesos Rápidos</div>
                         <div class="panel-custom-body p-4">
@@ -405,7 +407,7 @@ unset($datos);
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-4">
+                <div class="col-12 col-lg-4">
                     <div class="panel-custom">
                         <div class="panel-custom-header d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i> Stock Bajo</span>
@@ -509,7 +511,7 @@ unset($datos);
         <div class="tab-content" id="analytics-tab">
             <!-- Stat cards grid -->
             <div class="row g-3 mb-4">
-                <div class="col-md-4 col-6">
+                <div class="col-12 col-sm-6 col-md-4">
                     <div class="analytics-stat">
                         <div class="as-icon blue"><i class="bi bi-cart-plus"></i></div>
                         <div class="as-body">
@@ -523,7 +525,7 @@ unset($datos);
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 col-6">
+                <div class="col-12 col-sm-6 col-md-4">
                     <div class="analytics-stat">
                         <div class="as-icon green"><i class="bi bi-cash-coin"></i></div>
                         <div class="as-body">
@@ -537,7 +539,7 @@ unset($datos);
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 col-6">
+                <div class="col-12 col-sm-6 col-md-4">
                     <div class="analytics-stat">
                         <div class="as-icon purple"><i class="bi bi-trophy"></i></div>
                         <div class="as-body">
@@ -547,7 +549,7 @@ unset($datos);
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 col-6">
+                <div class="col-12 col-sm-6 col-md-4">
                     <div class="analytics-stat">
                         <div class="as-icon orange"><i class="bi bi-person-hearts"></i></div>
                         <div class="as-body">
@@ -557,7 +559,7 @@ unset($datos);
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 col-6">
+                <div class="col-12 col-sm-6 col-md-4">
                     <div class="analytics-stat">
                         <div class="as-icon teal"><i class="bi bi-calendar-week"></i></div>
                         <div class="as-body">
@@ -570,7 +572,7 @@ unset($datos);
             </div>
 
             <div class="row g-4">
-                <div class="col-md-5">
+                <div class="col-12 col-md-5">
                     <div class="panel-custom">
                         <div class="panel-custom-header"><i class="bi bi-pie-chart-fill me-2"></i> Ventas por Método de Pago (<?php echo $anio_actual; ?>)</div>
                         <div class="panel-custom-body p-4 text-center">
@@ -585,7 +587,7 @@ unset($datos);
                         </div>
                     </div>
                 </div>
-                <div class="col-md-7">
+                <div class="col-12 col-md-7">
                     <div class="panel-custom">
                         <div class="panel-custom-header"><i class="bi bi-trophy-fill me-2 text-warning"></i> Top 5 Productos Más Vendidos (<?php echo $anio_actual; ?>)</div>
                         <div class="panel-custom-body p-4">

@@ -77,10 +77,22 @@
 </div>
 
 <script type="module">
+  window.addEventListener('error', (event) => {
+    console.error('[LSM GLOBAL ERROR]', event.error || event.message, 'at', event.filename, ':', event.lineno);
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('[LSM UNHANDLED PROMISE]', event.reason);
+  });
+  // Test: insert visible element to confirm JS execution
+  document.body.insertAdjacentHTML('beforeend', '<div id="js-test-marker" style="position:fixed;top:10px;right:10px;z-index:99999;background:#0f172a;color:#22c55e;padding:8px 12px;border-radius:6px;font:12px monospace;border:2px solid #22c55e">JS EJECUTÁNDOSE</div>');
   import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js";
+  console.log('[LSM] movil.html module script started');
   cablearGlobal();
+  console.log('[LSM] cablearGlobal done, calling iniciar');
   iniciar("movil");
+  console.log('[LSM] iniciar called');
   registrarSW();
+  console.log('[LSM] registrarSW done');
 </script>
 </body>
 </html>

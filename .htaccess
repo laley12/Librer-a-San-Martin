@@ -1,0 +1,5 @@
+# HTTPS redirect - disabled until SSL cert is activated
+# Uncomment below when SSL is active in InfinityFree panel
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

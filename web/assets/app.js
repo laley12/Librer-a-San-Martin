@@ -5,6 +5,7 @@
    - un solo registro de vistas
    - una sola carga de datos + Realtime
    ===================================================================== */
+console.log('[LSM] app.js module loaded');
 import { sb, signIn, signOut, perfilActual, onAuthChange, hace, cambiarClave } from "./supabase-client.js";
 import { cargarTodo, conectarRealtime, state } from "./data.js";
 import { $, esc, toast } from "./ui.js";
@@ -25,7 +26,7 @@ const ORDEN = ["dashboard", "ventas", "inventario", "compras", "clientes", "usua
 const BOTONES_MOVIL = [
   { id: "dashboard", icono: "🏠", t: "Inicio" },
   { id: "ventas", icono: "🛒", t: "Venta", params: { tab: "pos" } },
-  { id: "inventario", icono: "📦", t: "Inventario" },
+  { id: "inventario", icono: "📦", t: "Productos" },
   { id: "ventas", icono: "💵", t: "Caja", params: { tab: "caja" } },
 ];
 
@@ -39,8 +40,10 @@ export const app = {
 
 /* ---------------- login ---------------- */
 export function pintarLogin() {
+  console.log('[LSM] pintarLogin called');
   const el = $("#login");
-  if (!el) return;
+  if (!el) { console.error('[LSM] #login element not found'); return; }
+  console.log('[LSM] #login element found, removing hidden class');
   el.classList.remove("hidden");
   el.innerHTML = `
   <div class="w-full max-w-md p-6">
@@ -67,6 +70,7 @@ export function pintarLogin() {
       </form>
     </div>
   </div>`;
+  console.log('[LSM] Login form HTML injected');
   $("#formLogin").addEventListener("submit", async (e) => {
     e.preventDefault();
     const err = $("#loginError");
@@ -75,9 +79,12 @@ export function pintarLogin() {
     btn.disabled = true;
     btn.textContent = "Ingresando…";
     try {
+      console.log('[LSM] Attempting signIn');
       await signIn($("#usuario").value.trim(), $("#password").value);
+      console.log('[LSM] signIn success, calling arrancar');
       await arrancar();
     } catch (ex) {
+      console.error('[LSM] signIn error:', ex);
       err.textContent = ex.message;
       err.classList.remove("hidden");
     } finally {
@@ -181,7 +188,7 @@ async function pintarShell() {
     $("#nav").innerHTML = ORDEN.map((id) => {
       const m = mod(id);
       return `<a href="#${id}" data-nav="${id}" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm ${id === app.vista ? "bg-white/15 font-semibold" : "hover:bg-white/10"}">
-        <span class="text-base">${m.icono}</span>${m.titulo}</a>`;
+        <span class="text-base">${m.meta.icono}</span>${m.meta.titulo}</a>`;
     }).join("");
   } else {
     $("#navInferior").innerHTML = BOTONES_MOVIL.map((b, i) => `
@@ -191,7 +198,7 @@ async function pintarShell() {
     $("#drawer").innerHTML = ORDEN.filter((id) => !["dashboard", "inventario"].includes(id)).map((id) => {
       const m = mod(id);
       return `<button data-ir="${id}" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-left">
-        <span class="text-lg">${m.icono}</span><span class="text-sm">${m.titulo}</span></button>`;
+        <span class="text-lg">${m.meta.icono}</span><span class="text-sm">${m.meta.titulo}</span></button>`;
     }).join("");
   }
 
@@ -213,28 +220,43 @@ function mod(id) {
 
 /* ---------------- arranque ---------------- */
 export async function iniciar(modo) {
+  console.log('[LSM] iniciar called with modo:', modo);
   app.modo = modo;
   pintarLogin();
   onAuthChange(async (evento, session) => {
-    /* Solo un cierre de sesión real limpia el estado. Durante un refresh de
-       token o un cambio de contraseña Supabase emite eventos con sesión
-       vacía; si se limpiara el perfil, la app se caería a mitad de sesión. */
+    console.log('[LSM] onAuthChange event:', evento, session ? 'session exists' : 'no session');
     if (evento === "SIGNED_OUT" || (!session && !app.perfil)) {
       app.perfil = null;
       $("#app").classList.add("hidden");
       pintarLogin();
     }
   });
+  console.log('[LSM] Calling perfilActual');
   const perfil = await perfilActual();
-  if (perfil) await arrancar();
+  console.log('[LSM] perfilActual returned:', perfil);
+  if (perfil) {
+    console.log('[LSM] Perfil exists, calling arrancar');
+    await arrancar();
+  } else {
+    console.log('[LSM] No perfil, staying on login');
+  }
 }
 
 async function arrancar() {
+  console.log('[LSM] arrancar started');
   app.perfil = await perfilActual();
-  if (!app.perfil) return pintarLogin();
+  console.log('[LSM] arrancar - perfilActual:', app.perfil);
+  if (!app.perfil) { console.log('[LSM] arrancar - no perfil, returning to login'); return pintarLogin(); }
+  console.log('[LSM] Calling pintarShell');
   await pintarShell();
-  if (app.perfil.debeCambiarClave) await exigirCambioClave(app.perfil);
+  console.log('[LSM] pintarShell done');
+  if (app.perfil.debeCambiarClave) {
+    console.log('[LSM] debeCambiarClave is true, calling exigirCambioClave');
+    await exigirCambioClave(app.perfil);
+  }
+  console.log('[LSM] Calling recargar');
   await recargar();
+  console.log('[LSM] recargar done');
   conectarRealtime((tabla, payload) => {
     if (tabla === "estado") {
       setRT(payload === "SUBSCRIBED" ? "ok" : "off");
@@ -243,6 +265,7 @@ async function arrancar() {
     programarRecarga();
   });
   const inicial = parseHash();
+  console.log('[LSM] Initial hash parse:', inicial);
   ir(inicial.id, true, inicial.params);
   window.addEventListener("hashchange", () => {
     const h = parseHash();
@@ -256,6 +279,13 @@ function parseHash() {
   const [id, sub] = bruto.split("/");
   if (!ORDEN.includes(id)) return { id: "dashboard", params: null };
   return { id, params: sub ? { tab: sub } : null };
+}
+
+/* data-params='{"tab":"caja"}' -> { tab: "caja" }  (nunca rompe la navegación) */
+function paramsDe(el) {
+  const bruto = el.dataset.params;
+  if (!bruto) return null;
+  try { return JSON.parse(bruto); } catch { return null; }
 }
 
 /* ---------------- datos ---------------- */
@@ -370,7 +400,7 @@ export function cablearGlobal() {
     const irA = e.target.closest("[data-ir]");
     if (irA) {
       cerrarDrawer();
-      ir(irA.dataset.ir, true);
+      ir(irA.dataset.ir, true, paramsDe(irA));
       return;
     }
     if (e.target.closest("#btnMenu")) {

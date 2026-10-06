@@ -21,3 +21,4 @@ assets/uploads/qr/*
 # Temp files
 *.log
 *.tmp
+.kilo/

@@ -17,11 +17,14 @@ $nombre = mysqli_real_escape_string($conexion, $_POST['nombre']);
 $usuario = mysqli_real_escape_string($conexion, $_POST['usuario']);
 $password = $_POST['password'];
 $rol = mysqli_real_escape_string($conexion, $_POST['rol']);
+$email = mysqli_real_escape_string($conexion, trim($_POST['email'] ?? ''));
+$telefono = mysqli_real_escape_string($conexion, trim($_POST['telefono'] ?? ''));
+$direccion = mysqli_real_escape_string($conexion, trim($_POST['direccion'] ?? ''));
 
 $hash = password_hash($password, PASSWORD_DEFAULT);
 
-$sql = "INSERT INTO usuarios (nombre, usuario, password, password_hash, rol, estado)
-VALUES ('$nombre','$usuario','$hash','$hash','$rol','Activo')";
+$sql = "INSERT INTO usuarios (nombre, usuario, password, password_hash, rol, estado, email, telefono, direccion)
+VALUES ('$nombre','$usuario','$hash','$hash','$rol','Activo','$email','$telefono','$direccion')";
 
 if(mysqli_query($conexion,$sql)){
     $nuevo_id = mysqli_insert_id($conexion);
@@ -37,7 +40,7 @@ if(mysqli_query($conexion,$sql)){
         }
     }
     registrar_auditoria($conexion, $_SESSION['id'], "Registró un nuevo usuario: $nombre (ID: $nuevo_id)", 'auditoria_usuarios');
-    header("Location: index.php");
+    header("Location: index.php?status=success");
 }else{
     echo "Error al guardar usuario";
 }

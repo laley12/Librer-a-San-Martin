@@ -24,6 +24,7 @@ if ($codigo !== '') {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pedido Registrado - Librería San Martín</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="/includes/base.css">
 <style>
 body { background: #f8f9fa; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; align-items: center; min-height: 100vh; }
 .success-container { max-width: 600px; margin: 40px auto; }

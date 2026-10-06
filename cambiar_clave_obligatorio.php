@@ -38,8 +38,9 @@ if(isset($_POST['cambiar_clave'])){
     <title>Cambio Obligatorio de Contraseña - Librería San Martín</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/includes/base.css">
     <style>
-        :root {
+:root {
             --body-bg: linear-gradient(135deg, #1e3c72, #2a5298);
             --topbar-bg: rgba(255,255,255,0.9);
             --profile-bg: #f1f5f9;
@@ -47,7 +48,7 @@ if(isset($_POST['cambiar_clave'])){
             --border-color: rgba(0,0,0,0.05);
             --card-bg: #ffffff;
         }
-        [data-theme="dark"] {
+[data-theme="dark"] {
             --body-bg: linear-gradient(135deg, #0f172a, #1e293b);
             --topbar-bg: rgba(30,41,59,0.95);
             --profile-bg: #334155;
@@ -55,13 +56,13 @@ if(isset($_POST['cambiar_clave'])){
             --border-color: rgba(255,255,255,0.06);
             --card-bg: #1e293b;
         }
-        body {
+body {
             background: var(--body-bg);
             min-height: 100vh;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             margin: 0;
         }
-        .topbar {
+.topbar {
             background: var(--topbar-bg);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -71,19 +72,19 @@ if(isset($_POST['cambiar_clave'])){
             align-items: center;
             border-bottom: 1px solid var(--border-color);
         }
-        .topbar-brand {
+.topbar-brand {
             font-size: 1.2rem;
             font-weight: 700;
             color: #1e3c72;
         }
-        .topbar-widgets {
+.topbar-widgets {
             display: flex;
             align-items: center;
             gap: 12px;
             font-size: 0.9rem;
             font-weight: 500;
         }
-        .widget-box {
+.widget-box {
             padding: 6px 14px;
             border-radius: 20px;
             font-size: 0.88rem;
@@ -93,9 +94,9 @@ if(isset($_POST['cambiar_clave'])){
             box-shadow: 0 2px 6px rgba(0,0,0,0.02);
             cursor: pointer;
         }
-        .widget-time { background: #e0f2fe; color: #0369a1; }
-        .widget-date { background: #dcfce7; color: #15803d; }
-        .user-profile {
+.widget-time { background: #e0f2fe; color: #0369a1; }
+.widget-date { background: #dcfce7; color: #15803d; }
+.user-profile {
             display: flex;
             align-items: center;
             background: var(--profile-bg);
@@ -103,13 +104,12 @@ if(isset($_POST['cambiar_clave'])){
             border-radius: 20px;
             color: var(--profile-text);
         }
-        .card-cambio {
+.card-cambio {
             width: 450px;
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             background: var(--card-bg);
         }
-    
 /* ==========================================================
    CORRECCIÓN DEL AVATAR Y PERFIL EN EL TOPBAR
    ========================================================== */
@@ -119,7 +119,6 @@ if(isset($_POST['cambiar_clave'])){
 .profile-info { display: flex; flex-direction: column; line-height: 1.2; }
 .profile-name { font-size: 0.88rem; white-space: nowrap; }
 .profile-role { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; white-space: nowrap; }
-
 /* ========================================================
    SUBMENÚS COMPACTOS ESTILO ERP (Ultra-compacto y premium)
    ======================================================== */
@@ -134,13 +133,9 @@ if(isset($_POST['cambiar_clave'])){
 .submenu-level-2 > a i, .submenu-level-2 > li > a i { font-size: 0.90rem; margin-right: 6px; width: 16px; text-align: center; }
 .submenu-level-2 > a:hover, .submenu-level-2 > li > a:hover { background-color: rgba(0, 0, 0, 0.03); color: #2a5298; }
 .submenu-level-2 > a.active, .submenu-level-2 > li > a.active { background-color: rgba(42, 82, 152, 0.04); color: #2a5298; font-weight: 500; }
-
-    
 /* ========================================================
    SIDEBAR TOGGLE (HAMBURGER MENU)
    ======================================================== */
-
-
     </style>
 </head>
 <body>

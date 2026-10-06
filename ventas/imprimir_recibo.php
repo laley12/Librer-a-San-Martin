@@ -27,29 +27,30 @@ $numero_recibo = $recibo ? $recibo['numero_recibo'] : 'REC-' . str_pad($id_venta
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Imprimir Recibo #<?php echo $numero_recibo; ?></title>
+<link rel="stylesheet" href="/includes/base.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Courier New', Courier, monospace; width: 80mm; margin: 0 auto; padding: 10px 5px; font-size: 12px; line-height: 1.4; color: #000; }
-        .header { text-align: center; margin-bottom: 10px; }
-        .header h2 { font-size: 16px; font-weight: 800; }
-        .header .sub { font-size: 10px; }
-        .recibo-num { text-align: center; font-size: 14px; font-weight: 700; margin: 5px 0; letter-spacing: 1px; }
-        .line { border-top: 1px dashed #000; margin: 5px 0; }
-        .row { display: flex; justify-content: space-between; }
-        .items { margin: 5px 0; }
-        .item { margin-bottom: 3px; }
-        .item-name { font-size: 11px; }
-        .item-detail { display: flex; justify-content: space-between; font-size: 11px; padding-left: 10px; }
-        .total { font-size: 14px; font-weight: 800; text-align: right; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; }
-        .footer { text-align: center; font-size: 10px; margin-top: 10px; }
-        .corte { text-align: center; font-size: 10px; letter-spacing: 3px; margin-top: 5px; }
-        .qr-img { text-align: center; margin: 5px 0; }
-        .qr-img img { width: 80px; height: 80px; }
-        @media print {
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Courier New', Courier, monospace; width: 80mm; margin: 0 auto; padding: 10px 5px; font-size: 12px; line-height: 1.4; color: #000; }
+.header { text-align: center; margin-bottom: 10px; }
+.header h2 { font-size: 16px; font-weight: 800; }
+.header .sub { font-size: 10px; }
+.recibo-num { text-align: center; font-size: 14px; font-weight: 700; margin: 5px 0; letter-spacing: 1px; }
+.line { border-top: 1px dashed #000; margin: 5px 0; }
+.row { display: flex; justify-content: space-between; }
+.items { margin: 5px 0; }
+.item { margin-bottom: 3px; }
+.item-name { font-size: 11px; }
+.item-detail { display: flex; justify-content: space-between; font-size: 11px; padding-left: 10px; }
+.total { font-size: 14px; font-weight: 800; text-align: right; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; }
+.footer { text-align: center; font-size: 10px; margin-top: 10px; }
+.corte { text-align: center; font-size: 10px; letter-spacing: 3px; margin-top: 5px; }
+.qr-img { text-align: center; margin: 5px 0; }
+.qr-img img { width: 80px; height: 80px; }
+@media print {
             body { width: 80mm; }
             .no-print { display: none; }
         }
-        .no-print { text-align: center; margin-bottom: 10px; }
+.no-print { text-align: center; margin-bottom: 10px; }
     </style>
 </head>
 <body>

@@ -48,40 +48,41 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
     <title>Librería San Martín - Tienda</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/includes/base.css">
     <style>
-        :root {
+:root {
             --hero-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             --card-shadow: 0 4px 15px rgba(0,0,0,0.06);
             --card-hover-shadow: 0 8px 25px rgba(0,0,0,0.12);
             --card-radius: 16px;
             --transition: all 0.3s ease;
         }
-        [data-bs-theme="dark"] {
+[data-bs-theme="dark"] {
             --card-shadow: 0 4px 15px rgba(0,0,0,0.3);
             --card-hover-shadow: 0 8px 25px rgba(0,0,0,0.5);
         }
-        [data-bs-theme="sepia"] {
+[data-bs-theme="sepia"] {
             --card-shadow: 0 4px 15px rgba(60,45,30,0.1);
             --card-hover-shadow: 0 8px 25px rgba(60,45,30,0.15);
         }
-        body {
+body {
             background: #f8fafc;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
-        [data-bs-theme="sepia"] body {
+[data-bs-theme="sepia"] body {
             background: #F5F0E1;
         }
-        [data-bs-theme="dark"] body {
+[data-bs-theme="dark"] body {
             background: #0f172a;
         }
-        .hero-section {
+.hero-section {
             background: var(--hero-bg);
             padding: 60px 0 50px;
             margin-bottom: 30px;
             position: relative;
             overflow: hidden;
         }
-        .hero-section::before {
+.hero-section::before {
             content: '';
             position: absolute;
             top: -50%;
@@ -91,7 +92,7 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             background: rgba(255,255,255,0.03);
             border-radius: 50%;
         }
-        .hero-section::after {
+.hero-section::after {
             content: '';
             position: absolute;
             bottom: -30%;
@@ -101,7 +102,7 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             background: rgba(255,255,255,0.02);
             border-radius: 50%;
         }
-        .hero-title {
+.hero-title {
             font-size: 2.2rem;
             font-weight: 800;
             color: #fff;
@@ -109,13 +110,13 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             position: relative;
             z-index: 1;
         }
-        .hero-subtitle {
+.hero-subtitle {
             color: rgba(255,255,255,0.8);
             font-size: 1.1rem;
             position: relative;
             z-index: 1;
         }
-        .cart-btn {
+.cart-btn {
             position: relative;
             background: rgba(255,255,255,0.15);
             border: 1px solid rgba(255,255,255,0.25);
@@ -125,11 +126,11 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             backdrop-filter: blur(8px);
             transition: var(--transition);
         }
-        .cart-btn:hover {
+.cart-btn:hover {
             background: rgba(255,255,255,0.25);
             color: #fff;
         }
-        .cart-badge {
+.cart-badge {
             position: absolute;
             top: -6px;
             right: -6px;
@@ -145,7 +146,7 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             justify-content: center;
             box-shadow: 0 2px 6px rgba(220,53,69,0.4);
         }
-        .category-pill {
+.category-pill {
             border-radius: 50px;
             padding: 8px 20px;
             font-size: 0.85rem;
@@ -157,34 +158,34 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             text-decoration: none;
             display: inline-block;
         }
-        .category-pill:hover, .category-pill.active {
+.category-pill:hover, .category-pill.active {
             background: #1e3c72;
             color: #fff;
             border-color: #1e3c72;
         }
-        [data-bs-theme="sepia"] .category-pill {
+[data-bs-theme="sepia"] .category-pill {
             background: #EDE4CC;
             border-color: #C4B59A;
             color: #3D2B1F;
         }
-        [data-bs-theme="sepia"] .category-pill:hover,
+[data-bs-theme="sepia"] .category-pill:hover,
         [data-bs-theme="sepia"] .category-pill.active {
             background: #C4B59A;
             border-color: #8B7D6B;
             color: #2C1810;
         }
-        [data-bs-theme="dark"] .category-pill {
+[data-bs-theme="dark"] .category-pill {
             background: #1e293b;
             border-color: #334155;
             color: #cbd5e1;
         }
-        [data-bs-theme="dark"] .category-pill:hover,
+[data-bs-theme="dark"] .category-pill:hover,
         [data-bs-theme="dark"] .category-pill.active {
             background: #2a5298;
             border-color: #2a5298;
             color: #fff;
         }
-        .producto-card {
+.producto-card {
             background: #fff;
             border-radius: var(--card-radius);
             box-shadow: var(--card-shadow);
@@ -193,17 +194,17 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             height: 100%;
             border: none;
         }
-        .producto-card:hover {
+.producto-card:hover {
             box-shadow: var(--card-hover-shadow);
             transform: translateY(-4px);
         }
-        [data-bs-theme="dark"] .producto-card {
+[data-bs-theme="dark"] .producto-card {
             background: #1e293b;
         }
-        [data-bs-theme="sepia"] .producto-card {
+[data-bs-theme="sepia"] .producto-card {
             background: #EDE4CC;
         }
-        .producto-img {
+.producto-img {
             width: 100%;
             height: 200px;
             object-fit: contain;
@@ -211,15 +212,15 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             background: #f8f9fa;
             border-bottom: 1px solid #f0f0f0;
         }
-        [data-bs-theme="dark"] .producto-img {
+[data-bs-theme="dark"] .producto-img {
             background: #0f172a;
             border-bottom-color: #1e293b;
         }
-        [data-bs-theme="sepia"] .producto-img {
+[data-bs-theme="sepia"] .producto-img {
             background: #F0E8D4;
             border-bottom-color: #C4B59A;
         }
-        .producto-img-placeholder {
+.producto-img-placeholder {
             width: 100%;
             height: 200px;
             display: flex;
@@ -230,18 +231,18 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             color: #adb5bd;
             border-bottom: 1px solid #f0f0f0;
         }
-        [data-bs-theme="dark"] .producto-img-placeholder {
+[data-bs-theme="dark"] .producto-img-placeholder {
             background: #0f172a;
             border-bottom-color: #1e293b;
         }
-        [data-bs-theme="sepia"] .producto-img-placeholder {
+[data-bs-theme="sepia"] .producto-img-placeholder {
             background: #F0E8D4;
             border-bottom-color: #C4B59A;
         }
-        .producto-body {
+.producto-body {
             padding: 16px;
         }
-        .producto-nombre {
+.producto-nombre {
             font-size: 0.95rem;
             font-weight: 600;
             color: #1e293b;
@@ -252,24 +253,24 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             overflow: hidden;
             min-height: 2.4em;
         }
-        [data-bs-theme="dark"] .producto-nombre {
+[data-bs-theme="dark"] .producto-nombre {
             color: #e2e8f0;
         }
-        [data-bs-theme="sepia"] .producto-nombre {
+[data-bs-theme="sepia"] .producto-nombre {
             color: #3D2B1F;
         }
-        .producto-precio {
+.producto-precio {
             font-size: 1.35rem;
             font-weight: 800;
             color: #1e3c72;
         }
-        [data-bs-theme="dark"] .producto-precio {
+[data-bs-theme="dark"] .producto-precio {
             color: #60a5fa;
         }
-        .producto-stock {
+.producto-stock {
             font-size: 0.8rem;
         }
-        .btn-add-cart {
+.btn-add-cart {
             border-radius: 50px;
             font-weight: 600;
             font-size: 0.85rem;
@@ -277,14 +278,14 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             transition: var(--transition);
             width: 100%;
         }
-        .toast-cart {
+.toast-cart {
             position: fixed;
             bottom: 20px;
             right: 20px;
             z-index: 9999;
             min-width: 250px;
         }
-        .dark-toggle-btn {
+.dark-toggle-btn {
             background: rgba(255,255,255,0.15);
             border: 1px solid rgba(255,255,255,0.25);
             color: #fff;
@@ -293,25 +294,25 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             cursor: pointer;
             transition: var(--transition);
         }
-        .dark-toggle-btn:hover {
+.dark-toggle-btn:hover {
             background: rgba(255,255,255,0.25);
         }
-        .search-form .input-group {
+.search-form .input-group {
             border-radius: 50px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
-        .search-form .form-control {
+.search-form .form-control {
             border: 1px solid #dee2e6;
             border-right: none;
             padding: 10px 16px;
         }
-        .search-form .btn {
+.search-form .btn {
             border: 1px solid #dee2e6;
             border-left: none;
             padding: 10px 16px;
         }
-        @media (max-width: 576px) {
+@media (max-width: 576px) {
             .hero-title { font-size: 1.6rem; }
             .hero-section { padding: 40px 0 30px; }
         }

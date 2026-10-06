@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Checkout - Librería San Martín</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="/includes/base.css">
 <style>
 body { background: #f8f9fa; font-family: 'Segoe UI', system-ui, sans-serif; }
 .checkout-container { max-width: 1100px; margin: 40px auto; }

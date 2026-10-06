@@ -52,7 +52,7 @@ if (isset($_POST['total'])) {
 
         $id_user = isset($_SESSION['id']) ? intval($_SESSION['id']) : 0;
         mysqli_query($conexion, "INSERT INTO auditoria_ventas (id_usuario, accion) VALUES ($id_user, 'Registró venta #$id_venta por Bs. $total')");
-        header("Location: index.php?msg=success");
+        header("Location: nuevo.php?venta_ok=" . $id_venta);
         exit();
     } else {
         echo "<h3>Error en la Base de Datos al registrar la venta:</h3>";

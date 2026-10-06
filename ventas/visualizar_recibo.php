@@ -29,18 +29,19 @@ $numero_recibo = $recibo ? $recibo['numero_recibo'] : 'REC-' . str_pad($id_venta
     <title>Recibo #<?php echo $numero_recibo; ?> - Librería San Martín</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/includes/base.css">
     <style>
-        body { background: #f0f3f8; font-family: 'Courier New', monospace; }
-        .receipt { max-width: 400px; margin: 30px auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); padding: 30px; }
-        .receipt-header { text-align: center; border-bottom: 2px dashed #dee2e6; padding-bottom: 15px; margin-bottom: 15px; }
-        .receipt-title { font-size: 1.3rem; font-weight: 800; color: #1e3c72; }
-        .receipt-line { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.9rem; }
-        .receipt-items { border-top: 1px dashed #dee2e6; border-bottom: 2px dashed #dee2e6; padding: 10px 0; margin: 10px 0; }
-        .receipt-total { font-size: 1.2rem; font-weight: 800; color: #198754; text-align: right; border-top: 1px solid #dee2e6; padding-top: 10px; margin-top: 5px; }
-        .receipt-footer { text-align: center; font-size: 0.8rem; color: #6c757d; margin-top: 15px; border-top: 2px dashed #dee2e6; padding-top: 15px; }
-        .status-badge { font-size: 0.7rem; padding: 2px 10px; }
-        .corte-line { text-align: center; font-size: 0.8rem; color: #6c757d; letter-spacing: 3px; margin-top: 10px; }
-        @media print { body { background: #fff; } .receipt { box-shadow: none; margin: 0; border-radius: 0; padding: 20px; max-width: 100%; font-family: 'Courier New', Courier, monospace; } .no-print { display: none !important; } header, nav, .sidebar, .topbar, .main-content > .topbar, .main-content > .container-fluid > .panel-custom > .panel-custom-header, .main-content > .container-fluid > .panel-custom > .panel-custom-body > .text-center.mt-3.mb-0 { display: none !important; } .main-content { margin-left: 0 !important; } .container-fluid { padding: 0 !important; } }
+body { background: #f0f3f8; font-family: 'Courier New', monospace; }
+.receipt { max-width: 400px; margin: 30px auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); padding: 30px; }
+.receipt-header { text-align: center; border-bottom: 2px dashed #dee2e6; padding-bottom: 15px; margin-bottom: 15px; }
+.receipt-title { font-size: 1.3rem; font-weight: 800; color: #1e3c72; }
+.receipt-line { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.9rem; }
+.receipt-items { border-top: 1px dashed #dee2e6; border-bottom: 2px dashed #dee2e6; padding: 10px 0; margin: 10px 0; }
+.receipt-total { font-size: 1.2rem; font-weight: 800; color: #198754; text-align: right; border-top: 1px solid #dee2e6; padding-top: 10px; margin-top: 5px; }
+.receipt-footer { text-align: center; font-size: 0.8rem; color: #6c757d; margin-top: 15px; border-top: 2px dashed #dee2e6; padding-top: 15px; }
+.status-badge { font-size: 0.7rem; padding: 2px 10px; }
+.corte-line { text-align: center; font-size: 0.8rem; color: #6c757d; letter-spacing: 3px; margin-top: 10px; }
+@media print { body { background: #fff; } .receipt { box-shadow: none; margin: 0; border-radius: 0; padding: 20px; max-width: 100%; font-family: 'Courier New', Courier, monospace; } .no-print { display: none !important; } header, nav, .sidebar, .topbar, .main-content > .topbar, .main-content > .container-fluid > .panel-custom > .panel-custom-header, .main-content > .container-fluid > .panel-custom > .panel-custom-body > .text-center.mt-3.mb-0 { display: none !important; } .main-content { margin-left: 0 !important; } .container-fluid { padding: 0 !important; } }
     </style>
 </head>
 <body>

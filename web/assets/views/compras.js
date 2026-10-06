@@ -8,6 +8,10 @@ let tab = "compras";
 let carrito = [];
 let filtroProv = "";
 
+export function abrir(params = {}) {
+  if (params.tab) tab = params.tab;
+}
+
 export function render() {
   return `
   <div class="fade space-y-4">

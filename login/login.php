@@ -95,10 +95,10 @@ if(isset($_POST['ingresar'])){
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
+<link rel="stylesheet" href="/includes/base.css">
 <style>
-
 body {
-    background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url('https://cdn.phototourl.com/free/2026-06-18-cfe49294-a2ef-4f79-8115-11677f814edb.png');
+    background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), linear-gradient(135deg, #1e3c72 0%, #2a5298 55%, #0f2027 100%);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -111,7 +111,6 @@ body {
     overflow: hidden;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
-
 .card-login {
     width: 450px;
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -123,20 +122,46 @@ body {
     color: #ffffff;
     animation: fadeInScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
-
 .logo-container {
     display: flex;
     justify-content: center;
     margin-bottom: 10px;
     margin-top: 10px;
 }
-
 .logo-img {
     width: 280px;
     height: auto;
     object-fit: contain;
 }
-
+.logo-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: #ffffff;
+}
+.logo-mark {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    color: #7dd3fc;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45));
+}
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    text-align: left;
+}
+.logo-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.logo-sub {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.7);
+}
 .form-control {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -145,21 +170,18 @@ body {
     padding: 12px 15px;
     transition: all 0.3s ease;
 }
-
 .form-control:focus {
     background: rgba(255, 255, 255, 0.12);
     border-color: #00ced1;
     color: #ffffff;
     box-shadow: 0 0 15px rgba(0, 206, 209, 0.35);
 }
-
 .form-label-custom {
     font-weight: 600;
     margin-bottom: 6px;
     font-size: 0.95rem;
     letter-spacing: 0.5px;
 }
-
 .btn-animate {
     background: linear-gradient(135deg, #00ced1, #20b2aa);
     background-size: 200% auto;
@@ -174,13 +196,11 @@ body {
     transition: all 0.4s ease;
     animation: gradientMove 4s ease infinite;
 }
-
 .btn-animate:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 206, 209, 0.6);
     color: white;
 }
-
 @keyframes fadeInScale {
     0% {
         opacity: 0;
@@ -191,14 +211,11 @@ body {
         transform: scale(1) translateY(0);
     }
 }
-
 @keyframes gradientMove {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
-
-
 /* ==========================================================
    CORRECCIÓN DEL AVATAR Y PERFIL EN EL TOPBAR
    ========================================================== */
@@ -208,7 +225,6 @@ body {
 .profile-info { display: flex; flex-direction: column; line-height: 1.2; }
 .profile-name { font-size: 0.88rem; white-space: nowrap; }
 .profile-role { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; white-space: nowrap; }
-
 /* ========================================================
    SUBMENÚS COMPACTOS ESTILO ERP (Ultra-compacto y premium)
    ======================================================== */
@@ -223,8 +239,6 @@ body {
 .submenu-level-2 > a i, .submenu-level-2 > li > a i { font-size: 0.90rem; margin-right: 6px; width: 16px; text-align: center; }
 .submenu-level-2 > a:hover, .submenu-level-2 > li > a:hover { background-color: rgba(0, 0, 0, 0.03); color: #2a5298; }
 .submenu-level-2 > a.active, .submenu-level-2 > li > a.active { background-color: rgba(42, 82, 152, 0.04); color: #2a5298; font-weight: 500; }
-
-    
 /* ========================================================
    SIDEBAR TOGGLE (HAMBURGER MENU)
    ======================================================== */
@@ -240,8 +254,7 @@ body {
 .sidebar.collapsed .collapse-toggle .chevron-icon { display: none; }
 .sidebar.collapsed .collapse-submenu, .sidebar.collapsed .collapse-submenu-2 { display: none !important; }
 .sidebar.collapsed ~ .main-content { margin-left: 70px; }
-
-    </style>
+</style>
 
 </head>
 <body>
@@ -251,7 +264,17 @@ body {
 <div class="card-body p-4 text-center">
 
 <div class="logo-container">
-    <img src="https://cdn.phototourl.com/free/2026-06-18-fab46ea4-e5da-46f6-8d74-d414278dc5ef.png" alt="Librería San Martín" class="logo-img">
+    <div class="logo-brand">
+        <svg class="logo-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5z"></path>
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z"></path>
+            <path d="M9 6h7"></path>
+        </svg>
+        <div class="logo-text">
+            <span class="logo-name">Librería San Martín</span>
+            <span class="logo-sub">Sistema de Gestión</span>
+        </div>
+    </div>
 </div>
 
 <?php

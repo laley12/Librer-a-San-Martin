@@ -13,7 +13,12 @@ function exportar_excel($datos, $nombre_archivo) {
 }
 function exportar_pdf($html, $nombre_archivo) {
     header('Content-Type: text/html; charset=utf-8');
-    echo '<html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;text-align:left;}</style></head><body>';
+    echo '<html><head><meta charset="UTF-8"><link rel="stylesheet" href="/includes/base.css">
+<style>
+body{font-family:sans-serif;padding:20px;}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #ccc;padding:6px;text-align:left;}
+</style></head><body>';
     echo $html;
     echo '<script>window.print();</script></body></html>';
     exit;

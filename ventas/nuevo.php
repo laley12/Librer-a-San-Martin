@@ -1,24 +1,43 @@
 <?php
+date_default_timezone_set('America/La_Paz');
 session_start();
 include("../config/conexion.php");
+include("../includes/csrf.php");
 
 if(!isset($_SESSION['id'])){
     header("Location: ../login/login.php");
     exit();
 }
 
+$id_user_venta = intval($_SESSION['id']);
+
+// Verificar caja abierta
+$caja_abierta = mysqli_query($conexion, "SELECT id FROM apertura_caja WHERE id_usuario=$id_user_venta AND activo=1 LIMIT 1");
+if (!$caja_abierta || mysqli_num_rows($caja_abierta) == 0) {
+    header("Location: caja.php?sin_caja=1");
+    exit();
+}
+
 $productos = mysqli_query($conexion, "SELECT id_producto, nombre_producto, precio, impuesto, stock FROM productos WHERE activo=1 AND stock > 0 ORDER BY nombre_producto ASC");
+
+$venta_ok = isset($_GET['venta_ok']) ? intval($_GET['venta_ok']) : 0;
+$venta_data = null;
+if ($venta_ok) {
+    $r = mysqli_query($conexion, "SELECT v.*, r.numero_recibo FROM ventas v LEFT JOIN recibos r ON v.id_venta = r.venta_id WHERE v.id_venta = $venta_ok LIMIT 1");
+    $venta_data = $r ? mysqli_fetch_assoc($r) : null;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>Nueva Venta - Librería San Martín</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="<?php echo BASE_URL; ?>assets/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/includes/base.css">
     <style>
-        :root {
+:root {
             --body-bg: #f0f3f8;
             --sidebar-bg: #ffffff;
             --sidebar-text: #1e293b;
@@ -31,12 +50,20 @@ $productos = mysqli_query($conexion, "SELECT id_producto, nombre_producto, preci
             --panel-header-bg: linear-gradient(135deg, #2a5298, #1e3c72);
             --profile-bg: #f1f5f9;
             --profile-text: #333;
+            --sub-item-active-bg: #eef2ff;
             --scrollbar-thumb: rgba(0,0,0,0.12);
             --scrollbar-thumb-hover: rgba(0,0,0,0.25);
             --collapse-line: #cbd5e1;
+            --collapse-dash: #94a3b8;
             --border-color: rgba(0,0,0,0.05);
+            --form-bg: #fff;
+            --form-text: #1e293b;
+            --form-border: #d1d5db;
+            --form-focus-border: #60a5fa;
+            --input-group-bg: #f1f5f9;
+            --card-bg: #fff;
         }
-        [data-theme="dark"] {
+[data-theme="dark"] {
             --body-bg: #0f172a;
             --sidebar-bg: #1e293b;
             --sidebar-text: #cbd5e1;
@@ -49,59 +76,138 @@ $productos = mysqli_query($conexion, "SELECT id_producto, nombre_producto, preci
             --panel-header-bg: linear-gradient(135deg, #0f172a, #1e293b);
             --profile-bg: #334155;
             --profile-text: #e2e8f0;
+            --sub-item-active-bg: #1e3a5f;
             --scrollbar-thumb: rgba(255,255,255,0.15);
             --scrollbar-thumb-hover: rgba(255,255,255,0.25);
             --collapse-line: #475569;
+            --collapse-dash: #64748b;
             --border-color: rgba(255,255,255,0.06);
+            --form-bg: #1e293b;
+            --form-text: #f1f5f9;
+            --form-border: #334155;
+            --form-focus-border: #60a5fa;
+            --input-group-bg: #0f172a;
+            --card-bg: #1e293b;
         }
-        body { background: var(--body-bg); font-family: 'Segoe UI', sans-serif; margin: 0; overflow-x: hidden; }
-        .sidebar { display: flex; flex-direction: column; width: 260px; height: 100vh; position: fixed; background: var(--sidebar-bg); box-shadow: 4px 0 20px rgba(0,0,0,0.03); z-index: 1000; }
-        .sidebar-brand { flex-shrink: 0; background: var(--sidebar-brand-bg); color: #ffffff; padding: 20px; font-size: 1.3rem; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
-        .sidebar-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px 10px; }
-        .sidebar-menu a { display: flex; align-items: center; color: var(--sidebar-text); text-decoration: none; padding: 12px 15px; font-size: 0.95rem; border-radius: 8px; margin-bottom: 5px; transition: all 0.25s ease; cursor: pointer; border-left: 3px solid transparent; }
-        .sidebar-menu a i { font-size: 1.1rem; margin-right: 12px; width: 25px; text-align: center; }
-        .sidebar-menu a:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-accent); border-left-color: var(--sidebar-accent); }
-        .sidebar-menu a.active { background: var(--sidebar-active-bg); color: var(--sidebar-accent); font-weight: 700; border-left: 4px solid var(--sidebar-accent); }
-        .main-content { margin-left: 260px; min-height: 100vh; }
-        .topbar { background: var(--topbar-bg); backdrop-filter: blur(10px); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
-        .topbar-title { font-size: 1.2rem; font-weight: 600; color: #1e3c72; }
-        .topbar-widgets { display: flex; align-items: center; gap: 12px; }
-        .widget-box { padding: 6px 14px; border-radius: 20px; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
-        .widget-time { background: #e0f2fe; color: #0369a1; }
-        .widget-date { background: #dcfce7; color: #15803d; }
-        .widget-weather { background: #fef3c7; color: #d97706; }
-        .user-profile { display: flex; align-items: center; background: var(--profile-bg); padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; color: var(--profile-text); }
-        .profile-avatar-wrap { flex-shrink: 0; margin-right: 10px; display: flex; align-items: center; }
-        .profile-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
-        .profile-avatar-inicial { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
-        .profile-info { display: flex; flex-direction: column; line-height: 1.2; }
-        .profile-name { font-size: 0.88rem; white-space: nowrap; }
-        .profile-role { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; white-space: nowrap; }
-        .panel-custom { border: none; border-radius: 12px; background: var(--panel-bg); box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 30px; animation: fadeInUp 0.5s ease-in-out; }
-        .panel-custom-header { padding: 20px; font-size: 1.05rem; font-weight: 600; color: #ffffff; border-top-left-radius: 12px; border-top-right-radius: 12px; background: var(--panel-header-bg); }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-        .sidebar { transition: all 0.3s ease; }
-        .main-content { transition: all 0.3s ease; }
-        .sidebar.collapsed { width: 70px; }
-        .sidebar.collapsed .sidebar-brand span.brand-text { display: none; }
-        .sidebar.collapsed .sidebar-brand { font-size: 1.1rem; padding: 20px 0; text-align: center; }
-        .sidebar.collapsed .sidebar-menu { padding: 15px 5px; }
-        .sidebar.collapsed .sidebar-menu a { padding: 12px 10px; justify-content: center; margin-bottom: 8px; }
-        .sidebar.collapsed .sidebar-menu a i.bi { margin-right: 0 !important; font-size: 1.3rem; }
-        .sidebar.collapsed .sidebar-menu a span.menu-text { display: none; }
-        .sidebar.collapsed .collapse-toggle .chevron-icon { display: none; }
-        .sidebar.collapsed .collapse-submenu, .sidebar.collapsed .collapse-submenu-2 { display: none !important; }
-        .sidebar.collapsed ~ .main-content { margin-left: 70px; }
-        .qr-section { text-align: center; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 2px dashed #dee2e6; }
-        [data-theme="dark"] .qr-section { background: #0f172a; border-color: #334155; }
-        .cart-table th { background: #f1f5f9; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .cart-item td { vertical-align: middle; }
-        .qty-input { width: 70px; text-align: center; }
-        .product-select { width: 100%; }
-        .kb-badge { display: inline-block; background: #1e293b; color: #fff; font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; margin-left: 4px; font-weight: 700; }
-        .kiosk-mode .sidebar { display: none !important; }
-        .kiosk-mode .main-content { margin-left: 0 !important; width: 100% !important; }
-        .kiosk-mode .topbar { display: none !important; }
+body { background: var(--body-bg); font-family: 'Segoe UI', sans-serif; margin: 0; overflow-x: hidden; }
+.sidebar { display: flex; flex-direction: column; width: 260px; height: 100vh; position: fixed; background: var(--sidebar-bg); box-shadow: 4px 0 20px rgba(0,0,0,0.03); z-index: 1000; transition: all 0.3s ease; }
+.sidebar-brand { flex-shrink: 0; background: var(--sidebar-brand-bg); color: #ffffff; padding: 20px; font-size: 1.3rem; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
+.sidebar-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px 10px; }
+.sidebar-menu::-webkit-scrollbar { width: 4px; }
+.sidebar-menu::-webkit-scrollbar-track { background: transparent; }
+.sidebar-menu::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
+.sidebar-menu::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+.sidebar-menu a { display: flex; align-items: center; color: var(--sidebar-text); text-decoration: none; padding: 12px 15px; font-size: 0.95rem; border-radius: 8px; margin-bottom: 5px; transition: all 0.25s ease; cursor: pointer; border-left: 3px solid transparent; }
+.sidebar-menu a i { font-size: 1.1rem; margin-right: 12px; width: 25px; text-align: center; }
+.sidebar-menu a:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-accent); border-left-color: var(--sidebar-accent); }
+.sidebar-menu a.active { background: var(--sidebar-active-bg); color: var(--sidebar-accent); font-weight: 700; border-left: 4px solid var(--sidebar-accent); box-shadow: inset 0 0 0 1px rgba(30,60,114,0.06); }
+.collapse-submenu { position: relative; }
+.collapse-submenu::before { content: ''; position: absolute; left: 22px; top: 4px; bottom: 4px; width: 2px; background: var(--collapse-line); border-radius: 2px; }
+.collapse-submenu a { padding-left: 45px !important; font-size: 0.9rem !important; position: relative; border-left: none !important; }
+.collapse-submenu a::before { content: ''; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 18px; height: 2px; background: var(--collapse-line); border-radius: 1px; }
+.collapse-submenu a:hover { background: var(--sidebar-hover-bg); border-left: none !important; }
+.collapse-submenu a.sub-item-active { background: var(--sub-item-active-bg); font-weight: 600; color: var(--sidebar-accent); border-radius: 0 8px 8px 0; }
+.collapse-submenu-2 { position: relative; }
+.collapse-submenu-2::before { content: ''; position: absolute; left: 35px; top: 4px; bottom: 4px; width: 2px; background: repeating-linear-gradient(to bottom, var(--collapse-dash) 0px, var(--collapse-dash) 4px, transparent 4px, transparent 8px); }
+.collapse-submenu-2 a { padding-left: 62px !important; font-size: 0.88rem !important; position: relative; }
+.collapse-submenu-2 a::before { content: ''; position: absolute; left: 35px; top: 50%; transform: translateY(-50%); width: 20px; height: 0; border-top: 2px dashed var(--collapse-dash); }
+.collapse-submenu-2 a:hover { background: var(--sidebar-hover-bg); }
+.sub-item-active { color: var(--sidebar-accent) !important; font-weight: 600; background-color: #f8fafc !important; border-left: 3px solid #2a5298; border-radius: 0 8px 8px 0; }
+.collapse-toggle { display: flex; justify-content: space-between; align-items: center; }
+.collapse-toggle .chevron-icon { font-size: 0.8rem; transition: transform 0.2s ease; }
+.collapse-toggle[aria-expanded="true"] .chevron-icon { transform: rotate(180deg); }
+.main-content { margin-left: 260px; min-height: 100vh; transition: all 0.3s ease; }
+.topbar { background: var(--topbar-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 999; }
+.topbar-title { font-size: 1.2rem; font-weight: 600; color: var(--sidebar-accent); }
+.topbar-widgets { display: flex; align-items: center; gap: 12px; }
+.widget-box { padding: 6px 14px; border-radius: 20px; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+.widget-time { background: #e0f2fe; color: #0369a1; }
+.widget-date { background: #dcfce7; color: #15803d; }
+.widget-weather { background: #fef3c7; color: #d97706; }
+.user-profile { display: flex; align-items: center; background: var(--profile-bg); padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; color: var(--profile-text); }
+.profile-avatar-wrap { flex-shrink: 0; margin-right: 10px; display: flex; align-items: center; }
+.profile-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+.profile-avatar-inicial { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+.profile-info { display: flex; flex-direction: column; line-height: 1.2; }
+.profile-name { font-size: 0.88rem; white-space: nowrap; }
+.profile-role { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; white-space: nowrap; }
+.panel-custom { border: none; border-radius: 12px; background: var(--panel-bg); box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-bottom: 30px; animation: fadeInUp 0.5s ease-in-out; overflow: hidden; }
+.panel-custom-header { padding: 20px; font-size: 1.05rem; font-weight: 600; color: #ffffff; border-radius: 12px 12px 0 0; background: var(--panel-header-bg); display: flex; justify-content: space-between; align-items: center; }
+.panel-custom-body { padding: 20px; }
+.treeview, .nav-treeview { list-style: none; padding: 0; margin: 0; }
+.treeview .treeview-menu { padding-left: 20px; list-style: none; display: none; }
+.treeview.menu-open > .treeview-menu { display: block; }
+.sidebar.collapsed { width: 70px; }
+.sidebar.collapsed .sidebar-brand span.brand-text { display: none; }
+.sidebar.collapsed .sidebar-brand { font-size: 1.1rem; padding: 20px 0; text-align: center; }
+.sidebar.collapsed .sidebar-menu { padding: 15px 5px; }
+.sidebar.collapsed .sidebar-menu a { padding: 12px 10px; justify-content: center; margin-bottom: 8px; position: relative; }
+.sidebar.collapsed .sidebar-menu a i.bi { margin-right: 0 !important; font-size: 1.3rem; }
+.sidebar.collapsed .sidebar-menu a span.menu-text { display: none; }
+.sidebar.collapsed .collapse-toggle .chevron-icon { display: none; }
+.sidebar.collapsed .collapse-submenu, .sidebar.collapsed .collapse-submenu-2 { display: none !important; }
+.sidebar.collapsed ~ .main-content { margin-left: 70px; }
+.submenu-level-1, .submenu-level-2 { overflow: hidden; transition: all 0.15s ease-in-out; margin: 0; padding: 0; list-style: none; }
+.submenu-level-1 { border-left: 2px solid #cbd5e1; margin-left: 14px; padding-left: 0; }
+.submenu-level-1 > a, .submenu-level-1 > li > a { display: flex; align-items: center; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 14px; padding-right: 14px; font-size: 0.88rem; font-weight: 500; color: #475569; text-decoration: none; transition: all 0.15s ease-in-out; border-radius: 0 6px 6px 0; }
+.submenu-level-1 > a i, .submenu-level-1 > li > a i { font-size: 0.95rem; margin-right: 8px; width: 18px; text-align: center; }
+.submenu-level-1 > a:hover, .submenu-level-1 > li > a:hover { background-color: rgba(0, 0, 0, 0.03); color: #1e3c72; }
+.submenu-level-1 > a.active, .submenu-level-1 > li > a.active { background-color: rgba(30, 60, 114, 0.05); color: #1e3c72; font-weight: 600; }
+.submenu-level-2 { border-left: 1.5px dashed #94a3b8; margin-left: 25px; padding-left: 0; margin-top: 2px; margin-bottom: 2px; }
+.submenu-level-2 > a, .submenu-level-2 > li > a { display: flex; align-items: center; padding-top: 4px !important; padding-bottom: 4px !important; padding-left: 16px; padding-right: 14px; font-size: 0.85rem; font-weight: 400; color: #64748b; text-decoration: none; transition: all 0.15s ease-in-out; border-radius: 0 6px 6px 0; }
+.submenu-level-2 > a i, .submenu-level-2 > li > a i { font-size: 0.90rem; margin-right: 6px; width: 16px; text-align: center; }
+.submenu-level-2 > a:hover, .submenu-level-2 > li > a:hover { background-color: rgba(0, 0, 0, 0.03); color: #2a5298; }
+.submenu-level-2 > a.active, .submenu-level-2 > li > a.active { background-color: rgba(42, 82, 152, 0.04); color: #2a5298; font-weight: 500; }
+[data-theme="dark"] .form-control, [data-theme="dark"] .form-select { background-color: var(--form-bg); color: var(--form-text); border-color: var(--form-border); }
+[data-theme="dark"] .form-control:focus, [data-theme="dark"] .form-select:focus { background-color: var(--form-bg); color: var(--form-text); border-color: var(--form-focus-border); box-shadow: 0 0 0 0.25rem rgba(59,130,246,0.25); }
+[data-theme="dark"] .input-group-text { background-color: var(--input-group-bg) !important; color: var(--form-text); border-color: var(--form-border); }
+[data-theme="dark"] .bg-light { background-color: #1e293b !important; color: #f1f5f9 !important; }
+.content-wrap { max-width: none !important; }
+.qr-section { text-align: center; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 2px dashed #dee2e6; }
+[data-theme="dark"] .qr-section { background: #0f172a; border-color: #334155; }
+.cart-table th { background: #f1f5f9; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+[data-theme="dark"] .cart-table th { background: #334155; color: #e2e8f0; }
+.cart-item td { vertical-align: middle; }
+.qty-input { width: 70px; text-align: center; }
+.product-select { width: 100%; }
+.kb-badge { display: inline-block; background: #1e293b; color: #fff; font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; margin-left: 4px; font-weight: 700; }
+.kiosk-mode .sidebar { display: none !important; }
+.kiosk-mode .main-content { margin-left: 0 !important; width: 100% !important; }
+.kiosk-mode .topbar { display: none !important; }
+body { overflow-x: hidden; }
+.hamburger-btn { background: none; border: none; font-size: 1.6rem; color: var(--sidebar-accent); cursor: pointer; padding: 0 5px; line-height: 1; display: none; align-items: center; }
+.hamburger-btn:hover { opacity: 0.7; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 991.98px) {
+            .sidebar { transform: translateX(-100%); width: 280px !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .sidebar.collapsed { width: 280px !important; }
+            .sidebar.collapsed .brand-text { display: block !important; }
+            .sidebar.collapsed .sidebar-menu a span.menu-text { display: inline !important; }
+            .sidebar.collapsed .sidebar-menu a { justify-content: flex-start; padding: 12px 15px; }
+            .sidebar.collapsed .sidebar-menu a i.bi { margin-right: 12px !important; font-size: 1.1rem !important; }
+            .sidebar.collapsed .sidebar-brand { font-size: 1.3rem; padding: 20px; }
+            .sidebar.collapsed .sidebar-brand span.brand-text { display: inline !important; }
+            .sidebar.collapsed .collapse-toggle .chevron-icon { display: inline; }
+            .sidebar.collapsed .collapse-submenu { display: block !important; }
+            .sidebar.collapsed ~ .main-content { margin-left: 0; }
+            .main-content { margin-left: 0 !important; }
+            .sidebar ~ .main-content { margin-left: 0; }
+            #sidebarOverlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; }
+            #sidebarOverlay.show { display: block; }
+            .topbar { padding: 12px 15px; flex-wrap: wrap; gap: 8px; }
+            .topbar-widgets .widget-box { font-size: 0.7rem; padding: 4px 8px; }
+            .topbar-widgets .user-profile { padding: 4px 10px; }
+            .topbar-widgets .user-profile .profile-name { font-size: 0.7rem; }
+            .topbar-widgets .user-profile .profile-role { display: none; }
+            .container-fluid.p-4 { padding: 12px !important; }
+            .panel-custom-header { padding: 14px 16px; font-size: 0.95rem; }
+            .panel-custom-body { padding: 14px; }
+            .table { font-size: 0.78rem; }
+            .hamburger-btn { display: flex !important; }
+            .topbar-title { font-size: 1rem; }
+            .row.g-3 .col-md-6, .row.g-3 .col-md-2, .row.g-3 .col-md-4, .row.g-3 .col-md-8 { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -110,7 +216,10 @@ $productos = mysqli_query($conexion, "SELECT id_producto, nombre_producto, preci
 
 <div class="main-content">
     <div class="topbar">
-        <div class="topbar-title"><i class="bi bi-cart-plus me-2"></i> Registrar Nueva Venta</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button class="hamburger-btn" id="sidebarToggleMobile" onclick="document.getElementById('mainSidebar').classList.toggle('mobile-open');document.getElementById('sidebarOverlay').classList.toggle('show');" title="Menú"><i class="bi bi-list"></i></button>
+            <div class="topbar-title"><i class="bi bi-cart-plus me-2"></i> Registrar Nueva Venta</div>
+        </div>
         <div class="topbar-widgets">
             <div class="widget-box widget-time"><i class="bi bi-clock-fill"></i> <span id="txt-reloj">00:00:00</span></div>
             <div class="widget-box widget-date"><i class="bi bi-calendar-event-fill"></i> <span id="txt-fecha">--/--/----</span></div>
@@ -137,17 +246,17 @@ $productos = mysqli_query($conexion, "SELECT id_producto, nombre_producto, preci
                             <span class="badge bg-light text-dark ms-2"><span id="cartCount">0</span> items</span>
                         </div>
                         <div class="panel-custom-body p-4">
-                            <!-- Barcode scanner input -->
+                            <!-- Búsqueda por código de producto -->
                             <div class="row g-2 mb-3">
                                 <div class="col-md-8">
                                     <div class="input-group">
                                         <span class="input-group-text bg-light"><i class="bi bi-upc-scan"></i></span>
-                                        <input type="text" id="barcodeInput" class="form-control" placeholder="Escanear código de barras..." autocomplete="off">
+                                        <input type="text" id="barcodeInput" class="form-control" placeholder="Buscar por código de producto (ej: 0006)..." autocomplete="off">
                                         <span class="input-group-text bg-light"><small class="text-muted">F1</small></span>
                                     </div>
                                 </div>
                                 <div class="col-md-4 d-flex align-items-center">
-                                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Escanea o escribe y presiona Enter</small>
+                                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Escribe el código y presiona Enter</small>
                                 </div>
                             </div>
                             <hr>
@@ -181,7 +290,7 @@ $productos = mysqli_query($conexion, "SELECT id_producto, nombre_producto, preci
                                 </div>
                                 <div class="col-md-2 d-flex align-items-end">
                                     <button type="button" class="btn btn-success w-100" onclick="agregarProducto()">
-                                        <i class="bi bi-plus-circle me-1"></i> + 
+                                        <i class="bi bi-plus-circle me-1"></i> +
                                     </button>
                                 </div>
                             </div>
@@ -211,6 +320,7 @@ $productos = mysqli_query($conexion, "SELECT id_producto, nombre_producto, preci
                             </div>
                             <input type="hidden" name="productos_json" id="productosJson">
                             <input type="hidden" name="total" id="totalHidden">
+                            <input type="hidden" name="csrf_token" value="<?php echo generarCsrf(); ?>">
                         </div>
                     </div>
                 </div>
@@ -294,6 +404,35 @@ $productos = mysqli_query($conexion, "SELECT id_producto, nombre_producto, preci
     </div>
 </div>
 
+<?php if ($venta_data): ?>
+<div class="modal fade" id="ventaOkModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+            <div class="modal-body text-center py-5 px-4">
+                <div style="width:80px;height:80px;border-radius:50%;background:#d1fae5;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>
+                </div>
+                <h4 class="fw-bold mb-1">¡Venta Registrada!</h4>
+                <p class="text-muted mb-3">Venta #<?php echo $venta_data['id_venta']; ?> por <strong>Bs. <?php echo number_format($venta_data['total'], 2); ?></strong></p>
+                <div class="d-flex justify-content-center gap-2">
+                    <a href="imprimir_recibo.php?id=<?php echo $venta_data['id_venta']; ?>" target="_blank" class="btn btn-primary" style="background:#1e3c72;border:none;padding:10px 24px;"><i class="bi bi-printer me-1"></i> Imprimir Recibo</a>
+                    <a href="nuevo.php" class="btn btn-outline-secondary" style="padding:10px 24px;"><i class="bi bi-check-lg me-1"></i> OK, Nueva Venta</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('ventaOkModal');
+    if (el && typeof bootstrap !== 'undefined') {
+        new bootstrap.Modal(el).show();
+    }
+});
+</script>
+<?php endif; ?>
+
+<script src="<?php echo BASE_PATH; ?>assets/js/bootstrap.bundle.min.js"></script>
 <script>
 var carrito = [];
 var todosProductos = <?php
@@ -310,9 +449,15 @@ echo json_encode($arr);
 
 function buscarPorBarras(codigo) {
     var encontrado = null;
+    var codigoLimpio = codigo.trim();
     for (var i = 0; i < todosProductos.length; i++) {
-        if (todosProductos[i].codigo_barras && todosProductos[i].codigo_barras === codigo) {
-            encontrado = todosProductos[i];
+        var prod = todosProductos[i];
+        if (String(prod.id_producto) === codigoLimpio || String(prod.id_producto) === String(parseInt(codigoLimpio, 10))) {
+            encontrado = prod;
+            break;
+        }
+        if (prod.codigo_barras && prod.codigo_barras === codigoLimpio) {
+            encontrado = prod;
             break;
         }
     }
@@ -516,7 +661,6 @@ function inicializarRelojYFecha() {
 inicializarRelojYFecha();
 setInterval(inicializarRelojYFecha, 1000);
 
-// Dark mode
 (function(){
     var toggle = document.createElement('div');
     toggle.className = 'widget-box';
@@ -538,7 +682,6 @@ setInterval(inicializarRelojYFecha, 1000);
     if (window.aplicarTema) { window.aplicarTema(localStorage.getItem('theme') || 'light'); }
 })();
 
-// Atajos de teclado
 document.addEventListener('keydown', function(e){
     switch(e.key) {
         case 'F1':
@@ -557,7 +700,6 @@ document.addEventListener('keydown', function(e){
             if (f && carrito.length > 0) f.submit();
             break;
         case 'Escape':
-            // Let escape work naturally for modals
             break;
     }
     if(e.ctrlKey && e.key === 's'){ e.preventDefault(); var f = document.getElementById('ventaForm'); if(f && carrito.length > 0) f.submit(); }

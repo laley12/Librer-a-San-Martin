@@ -107,65 +107,66 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
     <title>Carrito - Librería San Martín</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/includes/base.css">
     <style>
-        :root {
+:root {
             --hero-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             --card-radius: 16px;
             --transition: all 0.3s ease;
         }
-        [data-bs-theme="dark"] {
+[data-bs-theme="dark"] {
             --cart-bg: #1e293b;
             --cart-text: #e2e8f0;
             --cart-border: #334155;
             --cart-input-bg: #0f172a;
         }
-        [data-bs-theme="sepia"] {
+[data-bs-theme="sepia"] {
             --cart-bg: #EDE4CC;
             --cart-text: #3D2B1F;
             --cart-border: #C4B59A;
             --cart-input-bg: #FAF5E8;
         }
-        body {
+body {
             background: #f8fafc;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             min-height: 100vh;
         }
-        [data-bs-theme="dark"] body {
+[data-bs-theme="dark"] body {
             background: #0f172a;
         }
-        [data-bs-theme="sepia"] body {
+[data-bs-theme="sepia"] body {
             background: #F5F0E1;
         }
-        .top-bar {
+.top-bar {
             background: var(--hero-bg);
             padding: 20px 0;
         }
-        .top-bar h4 {
+.top-bar h4 {
             color: #fff;
             font-weight: 700;
             margin: 0;
         }
-        .top-bar a {
+.top-bar a {
             color: rgba(255,255,255,0.85);
             text-decoration: none;
             transition: var(--transition);
         }
-        .top-bar a:hover {
+.top-bar a:hover {
             color: #fff;
         }
-        .cart-table {
+.cart-table {
             background: #fff;
             border-radius: var(--card-radius);
             box-shadow: 0 4px 15px rgba(0,0,0,0.06);
             overflow: hidden;
         }
-        [data-bs-theme="dark"] .cart-table {
+[data-bs-theme="dark"] .cart-table {
             background: #1e293b;
         }
-        [data-bs-theme="sepia"] .cart-table {
+[data-bs-theme="sepia"] .cart-table {
             background: #EDE4CC;
         }
-        .cart-table th {
+.cart-table th {
             background: #f1f5f9;
             border-bottom: 2px solid #e2e8f0;
             font-weight: 600;
@@ -174,29 +175,29 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             letter-spacing: 0.5px;
             color: #475569;
         }
-        [data-bs-theme="dark"] .cart-table th {
+[data-bs-theme="dark"] .cart-table th {
             background: #0f172a;
             border-bottom-color: #334155;
             color: #94a3b8;
         }
-        [data-bs-theme="sepia"] .cart-table th {
+[data-bs-theme="sepia"] .cart-table th {
             background: #E0D5BB;
             border-bottom-color: #C4B59A;
             color: #3D2B1F;
         }
-        .cart-table td {
+.cart-table td {
             vertical-align: middle;
             border-color: #f1f5f9;
         }
-        [data-bs-theme="dark"] .cart-table td {
+[data-bs-theme="dark"] .cart-table td {
             border-color: #334155;
             color: #e2e8f0;
         }
-        [data-bs-theme="sepia"] .cart-table td {
+[data-bs-theme="sepia"] .cart-table td {
             border-color: #C4B59A;
             color: #3D2B1F;
         }
-        .cart-img {
+.cart-img {
             width: 60px;
             height: 60px;
             object-fit: contain;
@@ -204,13 +205,13 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             background: #f8f9fa;
             padding: 5px;
         }
-        [data-bs-theme="dark"] .cart-img {
+[data-bs-theme="dark"] .cart-img {
             background: #0f172a;
         }
-        [data-bs-theme="sepia"] .cart-img {
+[data-bs-theme="sepia"] .cart-img {
             background: #F0E8D4;
         }
-        .cart-img-placeholder {
+.cart-img-placeholder {
             width: 60px;
             height: 60px;
             display: flex;
@@ -221,13 +222,13 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             font-size: 1.5rem;
             color: #adb5bd;
         }
-        [data-bs-theme="dark"] .cart-img-placeholder {
+[data-bs-theme="dark"] .cart-img-placeholder {
             background: #0f172a;
         }
-        [data-bs-theme="sepia"] .cart-img-placeholder {
+[data-bs-theme="sepia"] .cart-img-placeholder {
             background: #F0E8D4;
         }
-        .qty-btn {
+.qty-btn {
             width: 32px;
             height: 32px;
             border-radius: 50%;
@@ -240,65 +241,65 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             transition: var(--transition);
             font-weight: 700;
         }
-        .qty-btn:hover {
+.qty-btn:hover {
             background: #f1f5f9;
             border-color: #cbd5e1;
         }
-        [data-bs-theme="dark"] .qty-btn {
+[data-bs-theme="dark"] .qty-btn {
             background: #334155;
             border-color: #475569;
             color: #e2e8f0;
         }
-        [data-bs-theme="sepia"] .qty-btn {
+[data-bs-theme="sepia"] .qty-btn {
             background: #FAF5E8;
             border-color: #C4B59A;
             color: #3D2B1F;
         }
-        [data-bs-theme="dark"] .qty-btn:hover {
+[data-bs-theme="dark"] .qty-btn:hover {
             background: #475569;
         }
-        [data-bs-theme="sepia"] .qty-btn:hover {
+[data-bs-theme="sepia"] .qty-btn:hover {
             background: #D4C5A9;
         }
-        .qty-display {
+.qty-display {
             display: inline-block;
             min-width: 32px;
             text-align: center;
             font-weight: 600;
         }
-        .total-box {
+.total-box {
             background: #fff;
             border-radius: var(--card-radius);
             box-shadow: 0 4px 15px rgba(0,0,0,0.06);
             padding: 24px;
         }
-        [data-bs-theme="dark"] .total-box {
+[data-bs-theme="dark"] .total-box {
             background: #1e293b;
         }
-        [data-bs-theme="sepia"] .total-box {
+[data-bs-theme="sepia"] .total-box {
             background: #EDE4CC;
         }
-        .total-label {
+.total-label {
             font-size: 0.9rem;
             color: #64748b;
         }
-        .total-amount {
+.total-amount {
             font-size: 2rem;
             font-weight: 800;
             color: #1e3c72;
         }
-        [data-bs-theme="dark"] .total-amount {
+[data-bs-theme="dark"] .total-amount {
             color: #60a5fa;
         }
-        [data-bs-theme="sepia"] .total-amount {
+[data-bs-theme="sepia"] .total-amount {
             color: #7A5C2E;
         }
-        .btn-checkout {
+.btn-checkout {
             border-radius: 50px;
             padding: 12px 32px;
             font-weight: 600;
         }
-        .dark-toggle-btn {
+.dark-toggle-btn {
             background: rgba(255,255,255,0.15);
             border: 1px solid rgba(255,255,255,0.25);
             color: #fff;
@@ -308,22 +309,22 @@ $cart_count = array_sum(array_column($carrito, 'cantidad'));
             transition: var(--transition);
             line-height: 1;
         }
-        .dark-toggle-btn:hover {
+.dark-toggle-btn:hover {
             background: rgba(255,255,255,0.25);
         }
-        .empty-cart {
+.empty-cart {
             text-align: center;
             padding: 80px 20px;
         }
-        .empty-cart i {
+.empty-cart i {
             font-size: 5rem;
             color: #cbd5e1;
         }
-        .empty-cart h4 {
+.empty-cart h4 {
             color: #64748b;
             margin-top: 16px;
         }
-        @media (max-width: 576px) {
+@media (max-width: 576px) {
             .total-amount { font-size: 1.5rem; }
         }
     </style>
