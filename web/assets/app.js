@@ -18,10 +18,11 @@ import * as clientes from "./views/clientes.js";
 import * as usuarios from "./views/usuarios.js";
 import * as reportes from "./views/reportes.js";
 import * as auditoria from "./views/auditoria.js";
+import * as perfil from "./views/perfil.js";
 
-export const MODULOS = [dashboard, ventas, inventario, compras, clientes, usuarios, reportes, auditoria];
+export const MODULOS = [dashboard, ventas, inventario, compras, clientes, usuarios, reportes, auditoria, perfil];
 
-const ORDEN = ["dashboard", "ventas", "inventario", "compras", "clientes", "usuarios", "reportes", "auditoria"];
+const ORDEN = ["dashboard", "ventas", "inventario", "compras", "clientes", "usuarios", "reportes", "auditoria", "perfil"];
 
 const BOTONES_MOVIL = [
   { id: "dashboard", icono: "🏠", t: "Inicio" },
@@ -197,7 +198,9 @@ async function pintarShell() {
       </button>`).join("");
     $("#drawer").innerHTML = ORDEN.filter((id) => !["dashboard", "inventario"].includes(id)).map((id) => {
       const m = mod(id);
-      return `<button data-ir="${id}" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-left">
+      const esPerfil = id === "perfil";
+      return `${esPerfil ? `<div class="pt-2 mt-2 border-t border-slate-100"></div>` : ""}
+      <button data-ir="${id}" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-left">
         <span class="text-lg">${m.meta.icono}</span><span class="text-sm">${m.meta.titulo}</span></button>`;
     }).join("");
   }
@@ -366,9 +369,10 @@ const SUBT = {
   inventario: "Productos, stock, movimientos y categorías",
   compras: "Compras, proveedores y ranking",
   clientes: "CRM, historial y clientes frecuentes",
-  usuarios: "Usuarios, roles y sucursales",
+  usuarios: "Usuarios, roles y permisos",
   reportes: "Indicadores, ventas vs compras y rotación",
   auditoria: "Consolido de los 8 registros de auditoría",
+  perfil: "Tu cuenta, PIN, sesión y versión del sistema",
 };
 function subtitulo(id) { return SUBT[id] || ""; }
 

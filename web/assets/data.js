@@ -29,6 +29,16 @@ export const state = { cargando: false, errores: [], ultimaCarga: null };
 TABLAS.forEach((t) => (state[t] = []));
 TABLAS_AUDITORIA.forEach((a) => (state[a.tabla] = []));
 
+/* Negocio de sede única: todas las transacciones se registran en la
+   sucursal principal (la primera activa; siempre existe la #1). */
+export function sucursalDefecto() {
+  const principal = state.sucursales.find((s) => Number(s.activo) === 1);
+  return principal ? principal.id_sucursal : 1;
+}
+
+/* Estado del canal Realtime, para mostrarlo en la vista de perfil. */
+export let estadoRealtime = false;
+
 /* ---------------- carga ---------------- */
 async function traer(tabla, columnas = "*") {
   const { data, error } = await sb.from(tabla).select(columnas).limit(2000);
@@ -86,6 +96,7 @@ export const repo = {
       id_usuario: idUsuario,
       id_cliente: clienteId || null,
       estado,
+      sucursal_id: sucursalDefecto(),
     });
     for (const l of lineas) {
       await insertar("detalle_ventas", {
@@ -95,6 +106,7 @@ export const repo = {
     const recibo = await insertar("recibos", {
       venta_id: venta.id_venta,
       numero_recibo: `R-${String(venta.id_venta).padStart(6, "0")}`,
+      sucursal_id: sucursalDefecto(),
     });
     await auditar("auditoria_ventas", idUsuario, `Registró venta #${venta.id_venta} por Bs ${total.toFixed(2)}`);
     return { venta, recibo, total };
@@ -109,6 +121,7 @@ export const repo = {
       await insertar("movimientos_inventario", {
         id_producto: d.producto_id, tipo: "AJUSTE", cantidad: d.cantidad,
         motivo: `Anulación venta #${ventaId}`, id_usuario: idUsuario,
+        sucursal_id: sucursalDefecto(),
       });
     }
     await actualizar("ventas", { estado: "Anulado" }, { id_venta: ventaId });
@@ -123,6 +136,7 @@ export const repo = {
       id_venta: ventaId, id_usuario: idUsuario, motivo: motivo || null,
       total_devuelto: lineas.reduce((s, l) => s + l.cantidad * l.precio_unitario, 0),
       fecha: new Date().toISOString(),
+      sucursal_id: sucursalDefecto(),
     });
     for (const l of lineas) {
       await insertar("detalle_devoluciones", {
@@ -133,6 +147,7 @@ export const repo = {
       await insertar("movimientos_inventario", {
         id_producto: l.productoId, tipo: "AJUSTE", cantidad: l.cantidad,
         motivo: `Devolución venta #${ventaId}`, id_usuario: idUsuario,
+        sucursal_id: sucursalDefecto(),
       });
     }
     await auditar("auditoria_ventas", idUsuario, `Registró devolución #${devolucion.id_devolucion} de la venta #${ventaId}`);
@@ -143,6 +158,7 @@ export const repo = {
     return insertar("apertura_caja", {
       id_usuario: idUsuario, monto_inicial: montoInicial, monto_esperado: montoInicial,
       observaciones: observaciones || null, fecha_apertura: new Date().toISOString(),
+      sucursal_id: sucursalDefecto(),
     });
   },
 
@@ -163,6 +179,7 @@ export const repo = {
     return insertar("caja_flujo", {
       id_usuario: idUsuario, monto_apertura: montoApertura, estado: "ABIERTA",
       fecha_apertura: new Date().toISOString(),
+      sucursal_id: sucursalDefecto(),
     });
   },
 
@@ -174,6 +191,7 @@ export const repo = {
   async crearGasto({ descripcion, monto, idUsuario, categoria = "Operativo" }) {
     const g = await insertar("gastos", {
       descripcion, monto, id_usuario: idUsuario, fecha: new Date().toISOString(),
+      sucursal_id: sucursalDefecto(),
     });
     await auditar("auditoria_ventas", idUsuario, `Registró gasto: ${descripcion} Bs ${monto}`);
     return g;
@@ -184,6 +202,7 @@ export const repo = {
     const m = await insertar("movimientos_inventario", {
       id_producto: productoId, tipo: "AJUSTE", cantidad, motivo, id_usuario: idUsuario,
       fecha_hora: new Date().toISOString(),
+      sucursal_id: sucursalDefecto(),
     });
     await auditar("auditoria_inventario", idUsuario, `Ajustó stock del producto #${productoId}: ${cantidad > 0 ? "+" : ""}${cantidad}`);
     return m;
@@ -225,6 +244,7 @@ export const repo = {
     const compra = await insertar("compras", {
       proveedor_id: proveedorId || null, nro_factura: nroFactura || null,
       fecha: new Date().toISOString().slice(0, 10), total,
+      sucursal_id: sucursalDefecto(),
     });
     for (const l of lineas) {
       await insertar("detalle_compras", {
@@ -281,9 +301,10 @@ export const repo = {
     return { usuario: u, perfilActualizado: Boolean(perfil) };
   },
 
-  async guardarPerfil({ perfilId, rol, nombre, sucursalId, idUsuario }) {
+  /* Sede única: el perfil siempre queda vinculado a la sucursal principal. */
+  async guardarPerfil({ perfilId, rol, nombre, idUsuario }) {
     const p = await actualizar("perfiles",
-      { rol, nombre, sucursal_id: sucursalId || null }, { id: perfilId });
+      { rol, nombre, sucursal_id: sucursalDefecto() }, { id: perfilId });
     const vinculado = state.usuarios.find((u) => Number(u.id) === Number(p.usuario_id));
     if (vinculado) await actualizar("usuarios", { rol, nombre }, { id: vinculado.id });
     await auditar("auditoria_usuarios", idUsuario, `Actualizó perfil de acceso #${p.usuario_id}: rol ${rol}`);
@@ -308,7 +329,10 @@ export function conectarRealtime(cb) {
   for (const t of tablas) {
     canal.on("postgres_changes", { event: "*", schema: "public", table: t }, (p) => cb(t, p));
   }
-  canal.subscribe((estado) => cb("estado", estado));
+  canal.subscribe((estado) => {
+    estadoRealtime = estado === "SUBSCRIBED";
+    cb("estado", estado);
+  });
   return canal;
 }
 

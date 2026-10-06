@@ -1,10 +1,10 @@
-const CACHE = "lsm-v6";
+const CACHE = "lsm-v7";
 const BASE = ["/", "/index.html", "/movil.html", "/manifest.webmanifest", "/icono.svg"];
 const ASSETS = [
   "/assets/app.js", "/assets/ui.js", "/assets/data.js", "/assets/supabase-client.js",
   "/assets/views/dashboard.js", "/assets/views/ventas.js", "/assets/views/inventario.js",
   "/assets/views/compras.js", "/assets/views/clientes.js", "/assets/views/usuarios.js",
-  "/assets/views/reportes.js", "/assets/views/auditoria.js",
+  "/assets/views/reportes.js", "/assets/views/auditoria.js", "/assets/views/perfil.js",
 ];
 
 self.addEventListener("install", (e) => {

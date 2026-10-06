@@ -17,13 +17,12 @@ export function render() {
       🔒 Solo un administrador puede crear usuarios o cambiar roles. Aquí puedes revisar la estructura de acceso.
     </div>` : ""}
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       ${seccion("Mi sesión", `
         <div class="space-y-2 text-sm">
           <div class="flex justify-between"><span class="text-slate-500">Usuario</span><b>${esc(_ctx?.perfil?.nombre || "—")}</b></div>
           <div class="flex justify-between"><span class="text-slate-500">Correo</span><b class="truncate">${esc(_ctx?.perfil?.email || "—")}</b></div>
           <div class="flex justify-between"><span class="text-slate-500">Rol</span><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-[#2a5298]">${esc(_ctx?.perfil?.rol || "—")}</span></div>
-          <div class="flex justify-between"><span class="text-slate-500">Sucursal</span><b>${esc(state.sucursales.find((s) => s.id_sucursal === _ctx?.perfil?.sucursalId)?.nombre || "Principal")}</b></div>
         </div>`)}
 
       ${seccion("Acceso por rol", `
@@ -35,12 +34,6 @@ export function render() {
           <div class="flex gap-2"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold shrink-0">Vendedor</span>
             <span class="text-slate-500">Punto de venta, historial y consulta de inventario.</span></div>
         </div>`)}
-
-      ${seccion("Sucursales", tabla([
-        { t: "Sucursal", v: (s) => esc(s.nombre) },
-        { t: "Teléfono", v: (s) => `<span class="text-xs text-slate-500">${esc(s.telefono || "—")}</span>` },
-        { t: "", der: 1, v: (s) => `<span class="text-[10px] px-2 py-0.5 rounded-full ${Number(s.activo) === 1 ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}">${Number(s.activo) === 1 ? "Activa" : "Inactiva"}</span>` },
-      ], state.sucursales, { vacio: "Sin sucursales" }))}
 
       ${soyAdmin ? seccion("Invitar por correo (Supabase Auth)", `
         <p class="text-[11px] text-slate-500 mb-3">
@@ -70,7 +63,6 @@ export function render() {
       { t: "Cuenta de acceso", v: (p) => `<span class="font-mono text-[10px] text-slate-600">${esc(p.email || "—")}</span>` },
       { t: "Rol", v: (p) => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-[#2a5298] font-semibold">${esc(p.rol || "—")}${(p.pin_obligatorio || p.debe_cambiar_clave) ? ' <span class="text-amber-600">· PIN temporal</span>' : ""}</span>` },
       { t: "Usuario #", der: 1, v: (p) => (p.usuario_id ? esc(state.usuarios.find((u) => u.id === p.usuario_id)?.nombre || p.usuario_id) : "—") },
-      { t: "Sucursal", der: 1, v: (p) => esc(state.sucursales.find((s) => s.id_sucursal === p.sucursal_id)?.nombre || "—") },
       { t: "", der: 1, v: (p) => `<button data-editperfil="${p.id}" class="text-[10px] px-2 py-1 rounded bg-violet-50 text-violet-700 font-semibold">Editar rol</button>` },
     ], mios, { vacio: "Sin perfiles" })) : ""}
   </div>`;
@@ -125,9 +117,9 @@ function modalPerfil(uuid) {
     cuerpo: `<div class="space-y-3">
       ${input("Nombre", { id: "pNombre", value: esc(p.nombre || "") })}
       ${select("Rol", ROLES.map((r) => ({ v: r, t: r })), { id: "pRol", value: p.rol })}
-      ${select("Sucursal", [{ v: "", t: "Principal" },
-        ...state.sucursales.map((s) => ({ v: String(s.id_sucursal), t: s.nombre }))],
-        { id: "pSucursal", value: p.sucursal_id ? String(p.sucursal_id) : "" })}
+      <p class="text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+        Sede única: el perfil queda vinculado a la sucursal principal automáticamente.
+      </p>
     </div>
     <p class="text-[10px] text-slate-400 mt-3">
       Vinculado a ${vinculado ? esc(vinculado.nombre) : "sin fila en usuarios"} (usuario #${esc(p.usuario_id ?? "—")}).
@@ -138,12 +130,10 @@ function modalPerfil(uuid) {
       {
         texto: "Guardar", clase: "bg-[#1e3c72] text-white",
         fn: async (w) => {
-          const suc = w.querySelector("#pSucursal").value;
           await repo.guardarPerfil({
             perfilId: p.id,
             rol: w.querySelector("#pRol").value,
             nombre: w.querySelector("#pNombre").value.trim(),
-            sucursalId: suc === "" ? null : Number(suc),
             idUsuario: _ctx?.perfil?.usuarioId,
           });
           toast("Perfil actualizado");
