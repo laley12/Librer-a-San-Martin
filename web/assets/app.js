@@ -6,7 +6,7 @@
    - una sola carga de datos + Realtime
    ===================================================================== */
 console.log('[LSM] app.js module loaded');
-import { sb, signIn, signOut, perfilActual, onAuthChange, hace, cambiarClave } from "./supabase-client.js";
+import { sb, signIn, signOut, perfilActual, onAuthChange, hace } from "./supabase-client.js";
 import { cargarTodo, conectarRealtime, state } from "./data.js";
 import { $, esc, toast } from "./ui.js";
 
@@ -29,6 +29,7 @@ const BOTONES_MOVIL = [
   { id: "ventas", icono: "🛒", t: "Venta", params: { tab: "pos" } },
   { id: "inventario", icono: "📦", t: "Productos" },
   { id: "ventas", icono: "💵", t: "Caja", params: { tab: "caja" } },
+  { id: "perfil", icono: "👤", t: "Perfil" },
 ];
 
 export const app = {
@@ -95,90 +96,8 @@ export function pintarLogin() {
   });
 }
 
-/* ---------- cambio de clave obligatorio en el primer ingreso ---------- */
-function exigirCambioClave(perfil) {
-  return new Promise((resolve) => {
-    const wrap = document.createElement("div");
-    wrap.className = "fixed inset-0 z-[1000] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4";
-    wrap.innerHTML = `
-      <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl fade">
-        <div class="px-6 pt-6 pb-2 text-center border-b border-slate-100">
-          <div class="text-3xl">🔑</div>
-            <h2 class="mt-2 text-lg font-bold text-[#1e3c72]">Define tu PIN</h2>
-            <p class="text-xs text-slate-500 mt-1">
-              Hola <b>${esc(perfil.nombre || perfil.usuario)}</b>. Es tu primer ingreso,
-              así que debes crear un PIN propio antes de usar el sistema.
-            </p>
-        </div>
-        <form id="formClave" class="px-6 py-5 space-y-4">
-          <label class="block">
-              <span class="block text-xs font-semibold text-slate-500 mb-1">PIN nuevo</span>
-              <input id="clave1" type="password" required autocomplete="new-password" inputmode="numeric"
-                class="w-full px-3 py-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#2a5298]" />
-            </label>
-            <label class="block">
-              <span class="block text-xs font-semibold text-slate-500 mb-1">Repite el PIN</span>
-              <input id="clave2" type="password" required autocomplete="new-password" inputmode="numeric"
-                class="w-full px-3 py-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#2a5298]" />
-            </label>
-            <p class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-              Entre 4 y 12 caracteres. Evita <code>12345</code> y PINs fáciles de adivinar.
-            </p>
-          <p id="claveError" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></p>
-          <button class="w-full py-3 rounded-lg bg-[#1e3c72] hover:bg-[#2a5298] text-white font-semibold transition">
-            Guardar PIN
-          </button>
-          <button type="button" id="salirCambio"
-            class="w-full text-xs text-slate-500 hover:text-slate-700 py-1">
-            Cerrar sesión
-          </button>
-        </form>
-      </div>`;
-    document.body.appendChild(wrap);
-    wrap.querySelector("#salirCambio").onclick = async () => {
-      await signOut();
-      location.reload();
-    };
-    wrap.querySelector("#formClave").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const err = wrap.querySelector("#claveError");
-      err.classList.add("hidden");
-      const a = wrap.querySelector("#clave1").value;
-      const b = wrap.querySelector("#clave2").value;
-      if (a.length < 4 || a.length > 12) {
-        err.textContent = "El PIN debe tener entre 4 y 12 caracteres";
-        return err.classList.remove("hidden");
-      }
-      if (a !== b) {
-        err.textContent = "Los PIN no coinciden";
-        return err.classList.remove("hidden");
-      }
-      if (/^(1234|12345|123456|0000|password|clave123|admin|abc123)$/i.test(a)) {
-        err.textContent = "Ese PIN es demasiado fácil. Elige otro.";
-        return err.classList.remove("hidden");
-      }
-      const btn = wrap.querySelector("#formClave button");
-      btn.disabled = true;
-      btn.textContent = "Guardando…";
-      try {
-        await cambiarClave(a);
-        if (app.perfil) {
-          app.perfil.debeCambiarClave = false;
-          app.perfil.pinObligatorio = false;
-        }
-        wrap.remove();
-        toast("PIN actualizado");
-        resolve();
-      } catch (ex) {
-        err.textContent = ex.message;
-        err.classList.remove("hidden");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Guardar PIN";
-      }
-    });
-  });
-}
+/* ---------- cambio de clave obligatorio NO se aplica: el primer ingreso
+   entra directo al Dashboard (la creación de PIN es opcional desde Mi Perfil) ---------- */
 
 async function pintarShell() {
   const app_ = $("#app");
@@ -206,9 +125,15 @@ async function pintarShell() {
   }
 
   const p = app.perfil;
-  if ($("#nombreUsuario")) $("#nombreUsuario").textContent = p.nombre || p.email;
+  if ($("#nombreUsuario")) $("#nombreUsuario").textContent = p.nombre || p.usuario || p.email;
   if ($("#rolUsuario")) $("#rolUsuario").textContent = p.rol;
-  if ($("#avatar")) $("#avatar").textContent = (p.nombre || "LS").slice(0, 2).toUpperCase();
+  const av = $("#avatar");
+  if (av) {
+    av.style.overflow = "hidden";
+    av.innerHTML = p.foto
+      ? `<img src="${esc(p.foto)}" alt="" class="w-full h-full object-cover" />`
+      : (p.nombre || "LS").slice(0, 2).toUpperCase();
+  }
 }
 
 function navMovilActiva() {
@@ -253,10 +178,6 @@ async function arrancar() {
   console.log('[LSM] Calling pintarShell');
   await pintarShell();
   console.log('[LSM] pintarShell done');
-  if (app.perfil.debeCambiarClave) {
-    console.log('[LSM] debeCambiarClave is true, calling exigirCambioClave');
-    await exigirCambioClave(app.perfil);
-  }
   console.log('[LSM] Calling recargar');
   await recargar();
   console.log('[LSM] recargar done');

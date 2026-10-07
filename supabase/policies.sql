@@ -18,7 +18,10 @@ create table if not exists public.perfiles (
     email       text,
     debe_cambiar_clave boolean not null default false,
     sucursal_id integer references public.sucursales(id_sucursal) on delete set null,
-    created_at  timestamptz not null default now()
+    created_at  timestamptz not null default now(),
+    foto            text,
+    telefono        text,
+    correo_contacto text
 );
 
 comment on table public.perfiles is
@@ -34,6 +37,9 @@ alter table public.perfiles enable row level security;
 alter table public.perfiles add column if not exists email text;
 alter table public.perfiles add column if not exists debe_cambiar_clave boolean not null default false;
 alter table public.perfiles add column if not exists pin_obligatorio boolean not null default false;
+alter table public.perfiles add column if not exists foto text;
+alter table public.perfiles add column if not exists telefono text;
+alter table public.perfiles add column if not exists correo_contacto text;
 
 -- ------------------------------------------------------------
 -- 1b. Credenciales locales: PIN de 5 digitos

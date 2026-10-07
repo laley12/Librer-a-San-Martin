@@ -7,6 +7,8 @@ export const meta = { id: "ventas", titulo: "Ventas & Caja", icono: "🧾", grup
 let tab = "pos";
 let carrito = [];
 let filtroHistorial = "";
+let filtroProd = "";
+let metodoPago = "Efectivo";
 
 export function abrir(params = {}) {
   if (params.tab) tab = params.tab;
@@ -35,71 +37,103 @@ function panel() {
 }
 
 /* ============ POS ============ */
+function cmpFiltro(p) {
+  const q = filtroProd.trim().toLowerCase();
+  if (!q) return true;
+  return p.nombre_producto.toLowerCase().includes(q) || String(p.codigo || "").toLowerCase().includes(q);
+}
+
+function tarjetasProducto(lista) {
+  return [...lista].sort((a, b) => a.nombre_producto.localeCompare(b.nombre_producto)).map((p) => `
+    <button data-add="${p.id_producto}" class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-slate-100 hover:border-[#2a5298] hover:bg-blue-50/40 text-left active:bg-blue-50">
+      <span class="min-w-0">
+        <span class="block text-sm font-medium truncate">${esc(p.nombre_producto)}</span>
+        <span class="block font-mono text-[10px] text-slate-400">${esc(p.codigo || "")}</span>
+      </span>
+      <span class="text-right shrink-0">
+        <span class="block text-sm font-bold text-[#1e3c72]">${money(p.precio)}</span>
+        <span class="block text-[10px] text-slate-400">stock ${p.stock}</span>
+      </span>
+    </button>`).join("");
+}
+
+function pintarProductos() {
+  const activos = state.productos.filter((p) => Number(p.activo) === 1 && Number(p.stock) > 0);
+  const visibles = activos.filter(cmpFiltro);
+  const lista = $("#listaProductos");
+  if (lista) lista.innerHTML = tarjetasProducto(visibles);
+  const c = $("#conteoProd");
+  if (c) c.textContent = `${visibles.length} de ${activos.length} productos disponibles · ${activos.filter((p) => p.stock <= 5).length} con stock bajo`;
+}
+
 function panelPOS() {
   const activos = state.productos.filter((p) => Number(p.activo) === 1 && Number(p.stock) > 0);
+  const visibles = activos.filter(cmpFiltro);
   const total = carrito.reduce((s, l) => s + l.cantidad * l.precio, 0);
+  const qr = configQR();
+  const esQR = metodoPago === "QR / Transferencia";
   return `
   <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
     <div class="lg:col-span-3 space-y-4">
       ${seccion("Buscar producto", `
-        <input id="buscarProd" list="listaProd" placeholder="Escribe el nombre o código y pulsa Enter…"
+        <input id="buscarProd" list="listaProd" value="${esc(filtroProd)}" placeholder="Busca por nombre o código de barras…"
           class="w-full px-3 py-3 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2a5298]" />
-        <datalist id="listaProd">${activos.map((p) => `<option value="${esc(p.nombre_producto)} — ${p.codigo}">`).join("")}</datalist>
+        <datalist id="listaProd">${visibles.map((p) => `<option value="${esc(p.nombre_producto)} — ${esc(p.codigo || "")}">`).join("")}</datalist>
         <div class="flex flex-wrap gap-2 mt-3">
           <button data-addmode="1" class="px-3 py-2 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200">Añadir por código</button>
         </div>
-        <p class="text-[10px] text-slate-400 mt-2">${activos.length} productos disponibles · ${activos.filter((p) => p.stock <= 5).length} con stock bajo</p>`)}
-
+        <p id="conteoProd" class="text-[10px] text-slate-400 mt-2">${visibles.length} de ${activos.length} productos disponibles · ${activos.filter((p) => p.stock <= 5).length} con stock bajo</p>`)}
       ${seccion("Productos con stock", `
-        <div class="max-h-[46vh] overflow-y-auto space-y-1.5 -mx-1 px-1">
-          ${activos.sort((a, b) => a.nombre_producto.localeCompare(b.nombre_producto)).map((p) => `
-            <button data-add="${p.id_producto}" class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-slate-100 hover:border-[#2a5298] hover:bg-blue-50/40 text-left">
-              <span class="min-w-0">
-                <span class="block text-sm font-medium truncate">${esc(p.nombre_producto)}</span>
-                <span class="block font-mono text-[10px] text-slate-400">${esc(p.codigo || "")}</span>
-              </span>
-              <span class="text-right shrink-0">
-                <span class="block text-sm font-bold text-[#1e3c72]">${money(p.precio)}</span>
-                <span class="block text-[10px] text-slate-400">stock ${p.stock}</span>
-              </span>
-            </button>`).join("")}
+        <div id="listaProductos" class="max-h-[42vh] lg:max-h-[60vh] overflow-y-auto space-y-1.5 -mx-1 px-1">
+          ${tarjetasProducto(visibles)}
         </div>`)}
     </div>
 
     <div class="lg:col-span-2">
       <div class="lg:sticky lg:top-4 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col max-h-[90vh]">
         <div class="px-4 py-3 border-b border-slate-100 font-semibold text-slate-700 text-sm">Venta actual</div>
-        <div id="carrito" class="grow overflow-y-auto divide-y divide-slate-50">
+        <div id="carrito" class="grow overflow-y-auto max-h-[36vh] lg:max-h-[50vh] divide-y divide-slate-50">
           ${carrito.length ? carrito.map((l) => `
-            <div class="px-4 py-2.5 flex items-center justify-between gap-2">
+            <div class="px-4 py-3 flex items-center justify-between gap-2">
               <div class="min-w-0">
                 <div class="text-xs font-semibold truncate">${esc(l.nombre)}</div>
-                <div class="text-[10px] text-slate-400">${money(l.precio)} × ${l.cantidad}</div>
+                <div class="text-[10px] text-slate-400">${money(l.precio)} cada uno</div>
               </div>
-              <div class="flex items-center gap-1.5 shrink-0">
-                <button data-cant="${l.productoId}" data-delta="-1" class="w-6 h-6 rounded bg-slate-100 text-sm font-bold">−</button>
-                <span class="w-6 text-center text-xs font-semibold">${l.cantidad}</span>
-                <button data-cant="${l.productoId}" data-delta="1" class="w-6 h-6 rounded bg-slate-100 text-sm font-bold">+</button>
-                <span class="w-20 text-right text-xs font-bold">${money(l.cantidad * l.precio)}</span>
-                <button data-quitar="${l.productoId}" class="text-slate-300 hover:text-red-500 text-lg leading-none">×</button>
+              <div class="flex items-center gap-2 shrink-0">
+                <button data-cant="${l.productoId}" data-delta="-1" class="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 text-lg font-bold grid place-items-center active:scale-95">−</button>
+                <span class="w-7 text-center text-sm font-bold">${l.cantidad}</span>
+                <button data-cant="${l.productoId}" data-delta="1" class="w-9 h-9 rounded-lg bg-[#1e3c72] hover:bg-[#2a5298] text-white text-lg font-bold grid place-items-center active:scale-95">+</button>
+                <span class="w-20 text-right text-sm font-bold">${money(l.cantidad * l.precio)}</span>
+                <button data-quitar="${l.productoId}" class="text-slate-300 hover:text-red-500 text-xl leading-none" aria-label="Quitar">×</button>
               </div>
             </div>`).join("") : `<p class="text-sm text-slate-400 text-center py-10">Carrito vacío<br /><span class="text-xs">Toca un producto para agregarlo</span></p>`}
         </div>
         <div class="px-4 py-3 border-t border-slate-100 space-y-3">
           <div class="flex justify-between items-baseline">
             <span class="text-sm text-slate-500">Total</span>
-            <span class="text-2xl font-bold text-[#1e3c72]">${money(total)}</span>
+            <span class="text-3xl font-black tracking-tight text-[#1e3c72]">${money(total)}</span>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <select id="metodoPago" class="px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white">
-              <option>Efectivo</option><option>Tarjeta</option><option>QR / Sinepay</option><option>Transferencia</option>
-            </select>
-            <select id="clienteVenta" class="px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white">
+          <div>
+            <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-1.5">Método de pago</div>
+            <div class="grid grid-cols-3 gap-2">
+              ${[["Efectivo", "💵"], ["QR / Transferencia", "📱"], ["Tarjeta", "💳"]].map(([m, ico]) => `
+                <button data-pago="${m}" class="px-1 py-2.5 rounded-lg text-[11px] font-bold leading-tight transition active:scale-[0.97] ${metodoPago === m ? "bg-[#1e3c72] text-white border border-[#1e3c72] shadow" : "bg-white text-slate-600 border border-slate-300"}">${ico}<br />${m.includes("QR") ? "QR / Transf." : m}</button>`).join("")}
+            </div>
+          </div>
+          ${esQR ? (qr.activo !== false ? `
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-center">
+            <img src="${urlQR(qr)}" alt="Código QR de cobro" class="w-36 h-36 mx-auto bg-white p-1.5 rounded-lg border border-slate-200" />
+            <p class="text-xs font-semibold text-emerald-700 mt-2">${esc(qr.nombre || "Librería San Martín")}</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Pide al cliente escanear antes de presionar Confirmar venta</p>
+          </div>` : `<p class="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">QR desactivado · actívalo en Ajustes → Código QR de cobro.</p>`) : ""}
+          <div>
+            <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-1.5">Cliente</div>
+            <select id="clienteVenta" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white">
               <option value="">Cliente general</option>
               ${state.clientes.filter((c) => Number(c.activo) === 1).map((c) => `<option value="${c.id_cliente}">${esc(c.nombre_cliente)}</option>`).join("")}
             </select>
           </div>
-          <button id="btnVender" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm">
+          <button id="btnVender" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow active:scale-[0.99]">
             Confirmar venta ${carrito.length ? `· ${money(total)}` : ""}
           </button>
           ${carrito.length ? `<button id="btnLimpiar" class="w-full text-xs text-slate-400 hover:text-red-500">Vaciar carrito</button>` : ""}
@@ -108,6 +142,7 @@ function panelPOS() {
     </div>
   </div>`;
 }
+
 
 function agregar(productoId, cantidad = 1) {
   const p = mapaProductos().get(Number(productoId));
@@ -176,11 +211,7 @@ function verRecibo(ventaId) {
       <div class="flex justify-between text-base font-bold border-t-2 border-slate-800 pt-2 mt-2">
         <span>TOTAL</span><span>${money(v.total)}</span>
       </div>
-      ${(() => { const qr = configQR(); return qr.activo === false ? "" : `
-      <div class="text-center mt-4 pt-3 border-t border-dashed border-slate-300">
-        <img src="${urlQR(qr)}" alt="QR" class="w-28 h-28 mx-auto" />
-        <div class="text-[10px] text-slate-500">${esc(qr.nombre || "Librería San Martín")}</div>
-      </div>`; })()}`,
+      ${qrTicket(v)}`,
     acciones: [
       { texto: "Cerrar", clase: "bg-slate-200 text-slate-700", fn: () => true },
       { texto: "Imprimir", clase: "bg-[#1e3c72] text-white", fn: () => { setTimeout(() => window.print(), 100); return true; } },
@@ -189,6 +220,18 @@ function verRecibo(ventaId) {
   function nombre(id) {
     return state.productos.find((p) => p.id_producto === id)?.nombre_producto || `#${id}`;
   }
+}
+
+function qrTicket(v) {
+  const esPagoQR = /qr|sinepay|transferencia/i.test(String(v.metodo_pago || ""));
+  if (!esPagoQR) return "";
+  const qr = configQR();
+  if (qr.activo === false) return "";
+  return `
+  <div class="text-center mt-4 pt-3 border-t border-dashed border-slate-300">
+    <img src="${urlQR(qr)}" alt="QR de validación" class="w-28 h-28 mx-auto" />
+    <div class="text-[10px] text-slate-500">${esc(qr.nombre || "Librería San Martín")}</div>
+  </div>`;
 }
 
 /* ============ CAJA ============ */
@@ -411,7 +454,7 @@ function panelAjustes() {
       <div class="space-y-3">
         <div class="flex gap-4 items-center">
           <img src="${urlQR(qr)}" alt="QR" class="w-32 h-32 border border-slate-200 rounded-lg" />
-          <p class="text-[11px] text-slate-500 grow">Se imprime junto al total en el ticket. Escanea para abrir el cobro.</p>
+          <p class="text-[11px] text-slate-500 grow">Se muestra en el POS al cobrar por QR y como comprobante en el recibo cuando el pago fue QR/Transferencia.</p>
         </div>
         ${input("Nombre del negocio", { id: "qrNombre", value: esc(qr.nombre || "Librería San Martín") })}
         ${input("Contenido / URL del QR", { id: "qrPayload", value: esc(qr.payload || ""), placeholder: "https://… o texto para el QR" })}
@@ -439,6 +482,9 @@ export function mount(root, ctx) {
     const t = e.target.closest("[data-tab]");
     if (t) { tab = t.dataset.tab; ctx.rerender(); return; }
 
+    const pago = e.target.closest("[data-pago]");
+    if (pago) { metodoPago = pago.dataset.pago; refrescarPanel(); return; }
+
     const add = e.target.closest("[data-add]");
     if (add) return agregar(+add.dataset.add);
 
@@ -464,7 +510,7 @@ export function mount(root, ctx) {
       try {
         const r = await repo.registrarVenta({
           clienteId: +$("#clienteVenta").value || null,
-          metodoPago: $("#metodoPago").value,
+          metodoPago,
           lineas: carrito,
           idUsuario: ctx.perfil.usuarioId,
         });
@@ -575,13 +621,27 @@ export function mount(root, ctx) {
     }
   });
 
+  root.addEventListener("input", (e) => {
+    if (e.target.id === "buscarProd") {
+      filtroProd = e.target.value;
+      pintarProductos();
+    }
+  });
+
   root.addEventListener("keydown", (e) => {
     if (e.target.id === "buscarProd" && e.key === "Enter") {
       e.preventDefault();
       const q = e.target.value.trim().toLowerCase();
-      const p = state.productos.filter((x) => Number(x.activo) === 1 && Number(x.stock) > 0)
-        .find((x) => x.nombre_producto.toLowerCase().includes(q) || String(x.codigo || "").toLowerCase() === q);
-      if (p) { agregar(p.id_producto); e.target.value = ""; }
+      const activos = state.productos.filter((x) => Number(x.activo) === 1 && Number(x.stock) > 0);
+      const p = activos.find((x) => String(x.codigo || "").toLowerCase() === q)
+        || activos.find((x) => x.nombre_producto.toLowerCase().includes(q));
+      if (p) {
+        agregar(p.id_producto);
+        filtroProd = "";
+        const inp = $("#buscarProd");
+        if (inp) inp.value = "";
+        pintarProductos();
+      }
       else toast("Producto no encontrado", "warn");
     }
     if (e.target.id === "filtroVentas") {
