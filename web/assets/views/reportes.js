@@ -1,35 +1,59 @@
 import { money, moneyCorto, num, fecha } from "../supabase-client.js";
-import { state, kpis, serie, topProductos, topProveedores, topClientes, ventasVigentes } from "../data.js";
+import { state, kpisRango, serieRango, rangoFechas, enPeriodo, topProductos, topProveedores, topClientes, ventasVigentes } from "../data.js";
 import { esc, tabla, seccion, barras, exportarCSV, kpiCard } from "../ui.js";
 
 export const meta = { id: "reportes", titulo: "Reportes Analíticos", icono: "📈", grupo: "Control" };
 
-let rango = 30;
+let rango = { opcion: "mes", inicio: "", fin: "" };
 let bloque = "ventas";
 
-const RANGOS = [[7, "7 días"], [30, "30 días"], [90, "90 días"], [365, "12 meses"]];
+const RANGOS = [
+  ["hoy", "Hoy"], ["semana", "Esta semana"], ["mes", "Este mes"], ["personalizado", "Personalizado"],
+];
+
+function etiquetaRango() {
+  const rc = rangoFechas(rango);
+  if (rango.opcion === "personalizado") return `personalizado (${rc.inicio} → ${rc.fin})`;
+  return (RANGOS.find(([k]) => k === rango.opcion) || [])[1] || "período";
+}
+
+function idsVentasRango() {
+  const rc = rangoFechas(rango);
+  return new Set(ventasVigentes().filter((v) => enPeriodo(v.fecha, rc)).map((v) => v.id_venta));
+}
+
+function idsComprasRango() {
+  const rc = rangoFechas(rango);
+  return new Set(state.compras.filter((c) => enPeriodo(c.fecha, rc)).map((c) => c.id_compra));
+}
 
 export function render() {
-  const k = kpis();
-  const s = serie(rango);
+  const k = kpisRango(rango);
+  const s = serieRango(rango);
   const max = Math.max(...s.map((x) => x.ventas), 1);
+  const etiqueta = etiquetaRango();
+  const esPer = rango.opcion === "personalizado";
   return `
   <div class="fade space-y-4">
     <div class="flex gap-2 flex-wrap items-center">
-      ${RANGOS.map(([n, t]) => `<button data-rango="${n}" class="px-3 py-1.5 rounded-lg text-xs font-semibold ${rango === n ? "bg-[#1e3c72] text-white" : "bg-white text-slate-600 border border-slate-200"}">${t}</button>`).join("")}
+      ${RANGOS.map(([k2, t]) => `<button data-rangoopc="${k2}" class="px-3 py-1.5 rounded-lg text-xs font-semibold ${rango.opcion === k2 ? "bg-[#1e3c72] text-white" : "bg-white text-slate-600 border border-slate-200"}">${t}</button>`).join("")}
+      ${esPer ? `
+        <input data-rangoini type="date" value="${rango.inicio}" class="px-2 py-1.5 border border-slate-300 rounded-lg text-xs" />
+        <span class="text-xs text-slate-400">→</span>
+        <input data-rangofin type="date" value="${rango.fin}" class="px-2 py-1.5 border border-slate-300 rounded-lg text-xs" />` : ""}
       <span class="grow"></span>
       <button data-export class="text-xs font-semibold text-[#2a5298] border border-[#2a5298] px-3 py-1.5 rounded-lg">Exportar serie CSV</button>
     </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      ${kpiCard({ label: "Ventas del mes", valor: money(k.mesTotal), sub: `${k.mesCount} ventas`, icono: "💰", color: "text-emerald-600", compacto: true })}
-      ${kpiCard({ label: "Margen bruto", valor: money(k.margen), sub: `${k.mesTotal ? Math.round((k.margen / k.mesTotal) * 100) : 0}% sobre venta`, icono: "🧮", color: "text-sky-600", compacto: true })}
-      ${kpiCard({ label: "Compras del mes", valor: money(k.comprasMes), sub: `${k.comprasMesCount} compras`, icono: "🛒", color: "text-orange-600", compacto: true })}
-      ${kpiCard({ label: "Utilidad neta", valor: money(k.utilidadMes), sub: `gastos ${money(k.gastosMes)}`, icono: "🏦", color: k.utilidadMes >= 0 ? "text-violet-600" : "text-red-600", compacto: true })}
+      ${kpiCard({ label: `Ventas ${etiqueta}`, valor: money(k.ventas), sub: `${k.count} ventas`, icono: "💰", color: "text-emerald-600", compacto: true })}
+      ${kpiCard({ label: "Margen bruto", valor: money(k.margen), sub: `${k.ventas ? Math.round((k.margen / k.ventas) * 100) : 0}% sobre venta`, icono: "🧮", color: "text-sky-600", compacto: true })}
+      ${kpiCard({ label: `Compras ${etiqueta}`, valor: money(k.compras), sub: `${k.comprasCount} compras`, icono: "🛒", color: "text-orange-600", compacto: true })}
+      ${kpiCard({ label: "Utilidad neta", valor: money(k.utilidad), sub: `gastos ${money(k.gastos)}`, icono: "🏦", color: k.utilidad >= 0 ? "text-violet-600" : "text-red-600", compacto: true })}
     </div>
 
-    ${seccion(`Ventas vs compras · últimos ${RANGOS.find(([n]) => n === rango)[1]}`, barras(s.map((x) => ({
-      etiqueta: rango > 90 ? fecha(x.fecha).slice(0, 5) : fecha(x.fecha).slice(0, 5),
+    ${seccion(`Ventas vs compras · ${etiqueta}`, barras(s.map((x) => ({
+      etiqueta: fecha(x.fecha).slice(0, 5),
       v: x.ventas,
       compras: x.compras,
     })), max, (v) => moneyCorto(v)), `<span class="text-[10px] text-slate-400">máx ${moneyCorto(max)}</span>`)}
@@ -44,7 +68,7 @@ export function render() {
 }
 
 function panel() {
-  const s = serie(rango);
+  const s = serieRango(rango);
   if (bloque === "productos") return panelProductos();
   if (bloque === "clientes") return panelClientes();
   if (bloque === "proveedores") return panelProveedores();
@@ -66,7 +90,7 @@ function panelVentas(s) {
 }
 
 function panelProductos() {
-  const top = topProductos(50);
+  const top = topProductos(50, idsVentasRango());
   const totalU = top.reduce((s, t) => s + t.unidades, 0);
   return seccion("Productos más vendidos", tabla([
     { t: "#", v: (_, i) => `<span class="font-bold text-slate-300">${i + 1}</span>` },
@@ -84,11 +108,11 @@ function panelClientes() {
     { t: "Compras", der: 1, v: (c) => c.compras },
     { t: "Total", der: 1, v: (c) => `<span class="font-bold text-emerald-600">${money(c.total)}</span>` },
     { t: "Ticket prom.", der: 1, v: (c) => money(c.compras ? c.total / c.compras : 0) },
-  ], topClientes(50), { vacio: "Sin ventas a clientes" }));
+  ], topClientes(50, idsVentasRango()), { vacio: "Sin ventas a clientes" }));
 }
 
 function panelProveedores() {
-  const lista = topProveedores(100);
+  const lista = topProveedores(100, idsComprasRango());
   const total = lista.reduce((s, p) => s + p.total, 0);
   return seccion("Proveedores por inversión", tabla([
     { t: "#", v: (_, i) => `<span class="font-bold text-slate-300">${i + 1}</span>` },
@@ -120,17 +144,30 @@ function panelInventario() {
 
 export function mount(root, ctx) {
   root.addEventListener("click", (e) => {
-    const r = e.target.closest("[data-rango]");
-    if (r) { rango = +r.dataset.rango; ctx.rerender(); return; }
+    const r = e.target.closest("[data-rangoopc]");
+    if (r) {
+      const opcion = r.dataset.rangoopc;
+      rango.opcion = opcion;
+      if (opcion !== "personalizado") { rango.inicio = ""; rango.fin = ""; }
+      ctx.rerender();
+      return;
+    }
     const b = e.target.closest("[data-bloque]");
     if (b) { bloque = b.dataset.bloque; ctx.rerender(); return; }
     if (e.target.closest("[data-export]")) {
-      const s = serie(rango);
-      exportarCSV(`reporte_ventas_${rango}d`, [
+      const s = serieRango(rango);
+      exportarCSV(`reporte_ventas_${rango.opcion}`, [
         { titulo: "Fecha", valor: (x) => x.fecha },
         { titulo: "Ventas", valor: (x) => x.ventas },
         { titulo: "Compras", valor: (x) => x.compras },
       ], s);
     }
+  });
+  root.addEventListener("change", (e) => {
+    const ini = e.target.closest("[data-rangoini]");
+    const fin = e.target.closest("[data-rangofin]");
+    if (ini) rango.inicio = ini.value;
+    if (fin) rango.fin = fin.value;
+    if (ini || fin) ctx.rerender();
   });
 }

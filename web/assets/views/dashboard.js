@@ -1,5 +1,5 @@
 import { money, moneyCorto, num, fecha, hace } from "../supabase-client.js";
-import { state, kpis, serie, topProductos, topProveedores, movimientosRecientes, nombreProducto, ventasVigentes } from "../data.js";
+import { state, kpisRango, serieRango, rangoFechas, enPeriodo, topProductos, topProveedores, movimientosRecientes, nombreProducto, ventasVigentes } from "../data.js";
 import { kpiCard, seccion, tabla, esc, badgeStock, ICONS } from "../ui.js";
 
 export const meta = { id: "dashboard", titulo: "Dashboard General", icono: "📊", grupo: "Principal" };
@@ -85,20 +85,51 @@ function bloqueAtajos() {
 }
 
 
+/* ---------------- selector de rango de fechas (HU9) ---------------- */
+const RANGOS = [
+  ["hoy", "Hoy"], ["semana", "Esta semana"], ["mes", "Este mes"], ["personalizado", "Personalizado"],
+];
+let rango = { opcion: "semana", inicio: "", fin: "" };
+
+function etiquetaRango() {
+  const rc = rangoFechas(rango);
+  if (rango.opcion === "personalizado") return `personalizado (${rc.inicio} → ${rc.fin})`;
+  return (RANGOS.find(([k]) => k === rango.opcion) || [])[1] || "período";
+}
+
+function selectorRango() {
+  const esPer = rango.opcion === "personalizado";
+  return `
+  <div class="flex flex-wrap gap-2 items-center mb-4">
+    ${RANGOS.map(([k, t]) => `
+      <button data-rangoopc="${k}" class="px-3 py-1.5 rounded-lg text-xs font-semibold ${rango.opcion === k ? "bg-[#1e3c72] text-white" : "bg-white text-slate-600 border border-slate-200"}">${t}</button>`).join("")}
+    ${esPer ? `
+      <input data-rangoini type="date" value="${rango.inicio}" class="px-2 py-1.5 border border-slate-300 rounded-lg text-xs" />
+      <span class="text-xs text-slate-400">→</span>
+      <input data-rangofin type="date" value="${rango.fin}" class="px-2 py-1.5 border border-slate-300 rounded-lg text-xs" />` : ""}
+  </div>`;
+}
+
 export function render() {
-  const k = kpis();
-  const s = serie(7);
+  const k = kpisRango(rango);
+  const s = serieRango(rango);
   const maxS = Math.max(...s.map((x) => x.ventas), 1);
-  const top = topProductos(5);
+  const rc = rangoFechas(rango);
+  const ids = new Set(ventasVigentes().filter((v) => enPeriodo(v.fecha, rc)).map((v) => v.id_venta));
+  const idsCompras = new Set(state.compras.filter((c) => enPeriodo(c.fecha, rc)).map((c) => c.id_compra));
+  const top = topProductos(5, ids);
   const maxT = Math.max(...top.map((t) => t.unidades), 1);
-  const prov = topProveedores(4);
+  const prov = topProveedores(4, idsCompras);
   const movs = movimientosRecientes(5);
   const cajaAbierta = state.apertura_caja.find((a) => Number(a.activo) === 1);
   const bajo = state.productos.filter((p) => Number(p.activo) === 1 && Number(p.stock) <= 5)
     .sort((a, b) => a.stock - b.stock).slice(0, 5);
+  const etiqueta = etiquetaRango();
 
   const chartData = s.map((x) => ({
-    label: new Date(x.fecha).toLocaleDateString("es-BO", { weekday: "short" }).slice(0, 3),
+    label: s.length <= 8
+      ? new Date(x.fecha + "T00:00:00").toLocaleDateString("es-BO", { weekday: "short" }).slice(0, 3)
+      : x.fecha.slice(8),
     value: x.ventas
   })).reverse();
   const maxChart = Math.max(...chartData.map((d) => d.value), 1);
@@ -120,6 +151,8 @@ export function render() {
       <button data-ir="ventas" data-params='{"tab":"caja"}' class="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition shrink-0">Abrir caja</button>
     </div>` : ""}
 
+    ${selectorRango()}
+
     <div class="mb-3 px-1 flex items-center justify-between">
       <div>
         <h2 class="text-base font-bold text-slate-700 uppercase tracking-wide">Resumen y Estado del Negocio</h2>
@@ -129,9 +162,9 @@ export function render() {
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       ${kpiCard({
-        label: "Ventas hoy",
-        valor: money(k.hoyTotal),
-        sub: `${k.hoyCount} ventas · ${k.unidadesHoy} art.`,
+        label: `Ventas ${etiqueta}`,
+        valor: money(k.ventas),
+        sub: `${k.count} ventas · ${k.unidades} art.`,
         icono: "money",
         color: "text-emerald-600",
         iconBg: "bg-emerald-50",
@@ -141,21 +174,9 @@ export function render() {
         onClick: "ir('ventas', true, {tab:'historial'})"
       })}
       ${kpiCard({
-        label: "Ventas del mes",
-        valor: money(k.mesTotal),
-        sub: `${k.mesCount} ventas`,
-        icono: "chart",
-        color: "text-[#1e3c72]",
-        iconBg: "bg-blue-50",
-        iconColor: "text-[#1e3c72]",
-        hoverIconBg: "bg-blue-100",
-        hoverIconColor: "text-blue-700",
-        onClick: "ir('ventas', true, {tab:'historial'})"
-      })}
-      ${kpiCard({
-        label: "Margen bruto mes",
+        label: `Margen bruto ${etiqueta}`,
         valor: money(k.margen),
-        sub: `costo de ventas ${money(k.mesTotal - k.margen)}`,
+        sub: `costo de ventas ${money(k.ventas - k.margen)}`,
         icono: "calc",
         color: "text-sky-600",
         iconBg: "bg-sky-50",
@@ -165,24 +186,36 @@ export function render() {
         onClick: "ir('reportes')"
       })}
       ${kpiCard({
-        label: "Utilidad del mes",
-        valor: money(k.utilidadMes),
-        sub: `gastos ${money(k.gastosMes)}`,
+        label: `Utilidad ${etiqueta}`,
+        valor: money(k.utilidad),
+        sub: `gastos ${money(k.gastos)}`,
         icono: "bank",
-        color: k.utilidadMes >= 0 ? "text-violet-600" : "text-red-600",
-        iconBg: k.utilidadMes >= 0 ? "bg-violet-50" : "bg-red-50",
-        iconColor: k.utilidadMes >= 0 ? "text-violet-600" : "text-red-600",
-        hoverIconBg: k.utilidadMes >= 0 ? "bg-violet-100" : "bg-red-100",
-        hoverIconColor: k.utilidadMes >= 0 ? "text-violet-700" : "text-red-700",
+        color: k.utilidad >= 0 ? "text-violet-600" : "text-red-600",
+        iconBg: k.utilidad >= 0 ? "bg-violet-50" : "bg-red-50",
+        iconColor: k.utilidad >= 0 ? "text-violet-600" : "text-red-600",
+        hoverIconBg: k.utilidad >= 0 ? "bg-violet-100" : "bg-red-100",
+        hoverIconColor: k.utilidad >= 0 ? "text-violet-700" : "text-red-700",
         onClick: "ir('reportes')"
+      })}
+      ${kpiCard({
+        label: `Compras ${etiqueta}`,
+        valor: money(k.compras),
+        sub: `${k.comprasCount} compras`,
+        icono: "cart",
+        color: "text-orange-600",
+        iconBg: "bg-orange-50",
+        iconColor: "text-orange-600",
+        hoverIconBg: "bg-orange-100",
+        hoverIconColor: "text-orange-700",
+        onClick: "ir('compras')"
       })}
     </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       ${kpiCard({
-        label: "Ticket promedio",
+        label: `Ticket promedio ${etiqueta}`,
         valor: money(k.ticket),
-        sub: "hoy",
+        sub: `${k.count} ventas`,
         icono: "ticket",
         color: "text-slate-700",
         iconBg: "bg-slate-50",
@@ -219,22 +252,22 @@ export function render() {
         onClick: "ir('inventario')"
       })}
       ${kpiCard({
-        label: "Compras del mes",
-        valor: money(k.comprasMes),
-        sub: `${k.comprasMesCount} compras`,
-        icono: "cart",
+        label: `Unidades vendidas ${etiqueta}`,
+        valor: num(k.unidades),
+        sub: `${k.count} ventas`,
+        icono: "box",
         color: "text-orange-600",
         iconBg: "bg-orange-50",
         iconColor: "text-orange-600",
         hoverIconBg: "bg-orange-100",
         hoverIconColor: "text-orange-700",
         compacto: true,
-        onClick: "ir('compras')"
+        onClick: "ir('ventas', true, {tab:'historial'})"
       })}
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      ${seccion("Ventas de la semana", `
+      ${seccion(`Ventas del período · ${etiqueta}`, `
         <div class="w-full h-48 md:h-56" id="chartSemanal">
           <canvas id="graficoSemanal"></canvas>
         </div>
@@ -259,7 +292,7 @@ export function render() {
         { t: "Fecha", v: (v) => `<span class="text-xs text-slate-500">${fecha(v.fecha)}</span>` },
         { t: "Pago", v: (v) => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100">${esc(v.metodo_pago || "—")}</span>` },
         { t: "Total", der: 1, v: (v) => `<span class="font-semibold text-emerald-600">${money(v.total)}</span>` },
-      ], [...ventasVigentes()].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 6)), "",
+      ], [...ventasVigentes()].filter((v) => enPeriodo(v.fecha, rc)).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 6)), "",
         `<button data-ir="ventas" data-params='{"tab":"historial"}' class="text-xs text-[#2a5298] font-semibold">Ver todo →</button>`)}
 
       ${seccion("Stock bajo", tabla([
@@ -291,6 +324,7 @@ export function render() {
   </div>`;
 }
 
+let _chart = null;
 function initChart() {
   try {
     const chartData = window.__dashboardChartData;
@@ -299,8 +333,9 @@ function initChart() {
     
     const ctx = document.getElementById('graficoSemanal');
     if (!ctx) return;
+    if (_chart) { _chart.destroy(); _chart = null; }
     
-    new Chart(ctx, {
+    _chart = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: chartData.map(d => d.label),
@@ -356,7 +391,24 @@ function initChart() {
 
 export function mount(root, ctx) {
   /* Los [data-ir] (atajos y "ver todo") los resuelve cablearGlobal() en
-     app.js, que sí entiende data-params; aquí solo se monta el gráfico. */
+     app.js, que sí entiende data-params. Aquí: botones del rango y gráfico. */
+  root.addEventListener("click", (e) => {
+    const r = e.target.closest("[data-rangoopc]");
+    if (r) {
+      const opcion = r.dataset.rangoopc;
+      rango.opcion = opcion;
+      if (opcion !== "personalizado") { rango.inicio = ""; rango.fin = ""; }
+      ctx.rerender();
+      return;
+    }
+  });
+  root.addEventListener("change", (e) => {
+    const ini = e.target.closest("[data-rangoini]");
+    const fin = e.target.closest("[data-rangofin]");
+    if (ini) rango.inicio = ini.value;
+    if (fin) rango.fin = fin.value;
+    if (ini || fin) ctx.rerender();
+  });
   if (window.Chart) {
     initChart();
   } else {
@@ -371,4 +423,10 @@ export function mount(root, ctx) {
     // Timeout de seguridad
     setTimeout(() => clearInterval(checkChart), 5000);
   }
+}
+
+/* Se llama tras cada redibujado (app.js dibujar): recrea el gráfico si el
+   canvas cambió o el rango de fechas recalculó los datos. */
+export function onRender() {
+  requestAnimationFrame(() => initChart());
 }

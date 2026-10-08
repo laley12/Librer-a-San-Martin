@@ -52,7 +52,7 @@ function tarjetasProducto(lista) {
       </span>
       <span class="text-right shrink-0">
         <span class="block text-sm font-bold text-[#1e3c72]">${money(p.precio)}</span>
-        <span class="block text-[10px] text-slate-400">stock ${p.stock}</span>
+        <span class="block text-[10px] ${Number(p.stock) <= 5 ? "text-amber-600 font-semibold" : "text-slate-400"}">${Number(p.stock) <= 5 ? `⚠️ stock ${p.stock} · reponer` : `stock ${p.stock}`}</span>
       </span>
     </button>`).join("");
 }

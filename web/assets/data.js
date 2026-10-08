@@ -349,6 +349,88 @@ export function nombreProducto(id) {
   return mapaProductos().get(id)?.nombre_producto || `Producto #${id}`;
 }
 
+/* ---------------- filtros por rango de fechas (HU9) ---------------- */
+function isoFechaAShort(d) {
+  return new Date(d).toISOString().slice(0, 10);
+}
+
+/* Convierte la opción de rango en límites [inicio, fin] (YYYY-MM-DD).
+   opcion: "hoy" | "semana" | "mes" | "personalizado". "semana" inicia el lunes. */
+export function rangoFechas({ opcion = "mes", inicio = "", fin = "" } = {}) {
+  const hoy = new Date();
+  const hoyIso = isoFechaAShort(hoy);
+  if (opcion === "hoy") return { inicio: hoyIso, fin: hoyIso };
+  if (opcion === "semana") {
+    const lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
+    return { inicio: isoFechaAShort(lunes), fin: hoyIso };
+  }
+  if (opcion === "personalizado") {
+    const a = inicio ? String(inicio).slice(0, 10) : hoyIso;
+    const b = fin ? String(fin).slice(0, 10) : hoyIso;
+    return { inicio: a <= b ? a : b, fin: a <= b ? b : a };
+  }
+  const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  return { inicio: isoFechaAShort(primero), fin: hoyIso };
+}
+
+export function enPeriodo(fecha, { inicio, fin }) {
+  const k = String(fecha || "").slice(0, 10);
+  return k >= inicio && k <= fin;
+}
+
+/* KPIs recalculados según el rango de fechas. El inventario es de corte:
+   no depende del período, solo de qué productos siguen activos. */
+export function kpisRango(r) {
+  const rc = rangoFechas(r);
+  const vigentes = ventasVigentes();
+  const v = vigentes.filter((x) => enPeriodo(x.fecha, rc));
+  const ids = new Set(v.map((x) => x.id_venta));
+  const detalle = state.detalle_ventas.filter((d) => ids.has(d.venta_id));
+  const unidades = detalle.reduce((s, d) => s + Number(d.cantidad || 0), 0);
+  const ventas = v.reduce((s, x) => s + Number(x.total || 0), 0);
+  const costo = detalle.reduce((s, d) => {
+    const p = state.productos.find((z) => z.id_producto === d.producto_id);
+    return s + Number(d.cantidad || 0) * Number(p?.precio_compra || 0);
+  }, 0);
+  const comprasTbl = state.compras.filter((c) => enPeriodo(c.fecha, rc));
+  const compras = comprasTbl.reduce((s, c) => s + Number(c.total || 0), 0);
+  const gastos = state.gastos.filter((g) => enPeriodo(g.fecha, rc)).reduce((s, g) => s + Number(g.monto || 0), 0);
+  const activos = state.productos.filter((p) => Number(p.activo) === 1);
+  return {
+    inicio: rc.inicio, fin: rc.fin,
+    ventas, count: v.length, unidades, ticket: v.length ? ventas / v.length : 0,
+    compras, comprasCount: comprasTbl.length,
+    margen: ventas - costo, gastos, utilidad: ventas - costo - gastos,
+    productos: activos.length,
+    stockBajo: activos.filter((p) => Number(p.stock) <= 5).length,
+    agotados: activos.filter((p) => Number(p.stock) <= 0).length,
+    valorInventario: activos.reduce((s, p) => s + Number(p.stock || 0) * Number(p.precio_compra || p.precio || 0), 0),
+    clientes: state.clientes.filter((c) => Number(c.activo) === 1).length,
+    proveedores: state.proveedores.filter((p) => Number(p.activo) === 1).length,
+  };
+}
+
+/* Serie diaria (ventas y compras) completa dentro del rango, sin huecos. */
+export function serieRango(r) {
+  const rc = rangoFechas(r);
+  const m = new Map();
+  const d = new Date(rc.inicio + "T00:00:00");
+  const fin = new Date(rc.fin + "T00:00:00");
+  for (let x = new Date(d); x.getTime() <= fin.getTime(); x.setDate(x.getDate() + 1)) {
+    m.set(isoFechaAShort(x), { ventas: 0, compras: 0 });
+  }
+  for (const v of ventasVigentes()) {
+    const k = String(v.fecha).slice(0, 10);
+    if (m.has(k)) m.get(k).ventas += Number(v.total || 0);
+  }
+  for (const c of state.compras) {
+    const k = String(c.fecha).slice(0, 10);
+    if (m.has(k)) m.get(k).compras += Number(c.total || 0);
+  }
+  return [...m.entries()].map(([fecha, v]) => ({ fecha, ...v }));
+}
+
 export function kpis() {
   const hoy = new Date().toISOString().slice(0, 10);
   const mes = hoy.slice(0, 7);
@@ -409,11 +491,11 @@ export function serie(dias = 7) {
   return [...m.entries()].map(([fecha, v]) => ({ fecha, ...v }));
 }
 
-export function topProductos(n = 5) {
-  const vigentes = new Set(ventasVigentes().map((v) => v.id_venta));
+export function topProductos(n = 5, idsVentas) {
+  const ids = idsVentas instanceof Set ? idsVentas : new Set(ventasVigentes().map((v) => v.id_venta));
   const m = new Map();
   for (const d of state.detalle_ventas) {
-    if (!vigentes.has(d.venta_id)) continue;
+    if (!ids.has(d.venta_id)) continue;
     const a = m.get(d.producto_id) || { unidades: 0, ingresos: 0, costo: 0 };
     a.unidades += Number(d.cantidad || 0);
     a.ingresos += Number(d.cantidad || 0) * Number(d.precio || 0);
@@ -427,9 +509,12 @@ export function topProductos(n = 5) {
   }
 }
 
-export function topProveedores(n = 5) {
+export function topProveedores(n = 5, idsCompras) {
+  const compras = idsCompras instanceof Set
+    ? state.compras.filter((c) => idsCompras.has(c.id_compra))
+    : state.compras;
   return state.proveedores.map((p) => {
-    const cs = state.compras.filter((c) => c.proveedor_id === p.id_proveedor);
+    const cs = compras.filter((c) => c.proveedor_id === p.id_proveedor);
     return {
       id: p.id_proveedor, nombre: p.nombre,
       compras: cs.length, total: cs.reduce((s, c) => s + Number(c.total || 0), 0),
@@ -437,10 +522,12 @@ export function topProveedores(n = 5) {
   }).sort((a, b) => b.total - a.total).slice(0, n);
 }
 
-export function topClientes(n = 5) {
-  const vigentes = ventasVigentes();
+export function topClientes(n = 5, idsVentas) {
+  const ventas = idsVentas instanceof Set
+    ? state.ventas.filter((v) => idsVentas.has(v.id_venta))
+    : ventasVigentes();
   return state.clientes.map((c) => {
-    const vs = vigentes.filter((v) => v.id_cliente === c.id_cliente);
+    const vs = ventas.filter((v) => v.id_cliente === c.id_cliente);
     return {
       id: c.id_cliente, nombre: c.nombre_cliente,
       compras: vs.length, total: vs.reduce((s, v) => s + Number(v.total || 0), 0),

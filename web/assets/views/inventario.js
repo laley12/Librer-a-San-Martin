@@ -1,6 +1,6 @@
 import { money, moneyCorto, num, fecha, fechaHora } from "../supabase-client.js";
 import { state, repo, kpis, movimientosRecientes, mapaProductos } from "../data.js";
-import { esc, toast, modal, tabla, seccion, input, select, badgeStock, exportarCSV } from "../ui.js";
+import { esc, toast, modal, tabla, seccion, input, select, badgeStock, exportarCSV, confirmar } from "../ui.js";
 
 export const meta = { id: "inventario", titulo: "Productos & Inventario", icono: "📦", grupo: "Operación" };
 
@@ -50,20 +50,48 @@ function ctx_ayuda() {
 
 function productosFiltrados() {
   const q = filtro.texto.toLowerCase();
-  let lista = state.productos.filter((p) => Number(p.activo) === 1);
+  let lista;
+  if (filtro.vista === "inactivos") {
+    lista = state.productos.filter((p) => Number(p.activo) !== 1);
+  } else {
+    lista = state.productos.filter((p) => Number(p.activo) === 1);
+    if (filtro.vista === "bajo") lista = lista.filter((p) => Number(p.stock) <= 5);
+    if (filtro.vista === "agotado") lista = lista.filter((p) => Number(p.stock) <= 0);
+  }
   if (filtro.cat) lista = lista.filter((p) => String(p.categoria_id) === filtro.cat);
   if (q) lista = lista.filter((p) => p.nombre_producto.toLowerCase().includes(q) || String(p.codigo || "").toLowerCase().includes(q));
-  if (filtro.vista === "bajo") lista = lista.filter((p) => Number(p.stock) <= 5);
-  if (filtro.vista === "agotado") lista = lista.filter((p) => Number(p.stock) <= 0);
   return lista.sort((a, b) => a.nombre_producto.localeCompare(b.nombre_producto));
 }
 
 function panel() {
+  if (tab === "stock") return panelStockBajo();
   const lista = productosFiltrados();
   if (tab === "movimientos") return panelMovimientos();
   if (tab === "valor") return panelValor();
   if (tab === "categorias") return panelCategorias();
   return panelListado(lista);
+}
+
+function panelStockBajo() {
+  const bajo = state.productos.filter((p) => Number(p.activo) === 1 && Number(p.stock) <= 5)
+    .sort((a, b) => a.stock - b.stock);
+  const agotados = bajo.filter((p) => Number(p.stock) <= 0).length;
+  return `
+  <div class="space-y-4 fade">
+    ${bajo.length ? `<div class="bg-amber-50 border-2 border-amber-200 text-amber-900 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+      ⚠️ ${bajo.length} productos en niveles mínimos (stock ≤ 5); ${agotados} agotados. Repón inventario o ajusta existencias.
+    </div>` : `<div class="bg-emerald-50 border-2 border-emerald-200 text-emerald-800 rounded-xl px-4 py-3 text-sm">
+      ✅ Todo el inventario está por encima del mínimo (5 unidades).
+    </div>`}
+    ${seccion(`Stock bajo y agotados (${bajo.length})`, tabla([
+      { t: "Código", v: (p) => `<span class="font-mono text-[10px] text-slate-500">${esc(p.codigo || "—")}</span>` },
+      { t: "Producto", v: (p) => `<span class="font-medium">${esc(p.nombre_producto)}</span>` },
+      { t: "Categoría", v: (p) => `<span class="text-xs text-slate-500">${esc(state.categorias.find((c) => c.id_categoria === p.categoria_id)?.nombre_categoria || "—")}</span>` },
+      { t: "Precio", der: 1, v: (p) => `<span class="font-semibold">${money(p.precio)}</span>` },
+      { t: "Stock", der: 1, v: (p) => `<span class="font-bold ${Number(p.stock) <= 0 ? "text-red-600" : "text-amber-600"}">${p.stock}</span> ${badgeStock(p.stock)}` },
+      { t: "", der: 1, v: (p) => `<button data-ajuste="${p.id_producto}" class="text-[10px] px-2 py-1 rounded bg-blue-50 text-[#2a5298] font-semibold">Ajustar</button>` },
+    ], bajo, { vacio: "Ningún producto con stock bajo" }))}
+  </div>`;
 }
 
 function panelListado(lista) {
@@ -72,7 +100,8 @@ function panelListado(lista) {
       <input id="filtroProd" value="${esc(filtro.texto)}" placeholder="Buscar por nombre o código…"
         class="grow min-w-[160px] px-3 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2a5298]" />
       <select id="filtroVista" class="px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white">
-        <option value="todos" ${filtro.vista === "todos" ? "selected" : ""}>Todos</option>
+        <option value="todos" ${filtro.vista === "todos" ? "selected" : ""}>Activos</option>
+        <option value="inactivos" ${filtro.vista === "inactivos" ? "selected" : ""}>Inactivos (dados de baja)</option>
         <option value="bajo" ${filtro.vista === "bajo" ? "selected" : ""}>Stock bajo</option>
         <option value="agotado" ${filtro.vista === "agotado" ? "selected" : ""}>Agotados</option>
       </select>
@@ -88,7 +117,7 @@ function panelListado(lista) {
       { t: "Costo", der: 1, v: (p) => `<span class="text-xs text-slate-500">${money(p.precio_compra)}</span>` },
       { t: "Precio", der: 1, v: (p) => `<span class="font-semibold">${money(p.precio)}</span>` },
       { t: "Stock", der: 1, v: (p) => `<span class="font-bold">${p.stock}</span> ${badgeStock(p.stock)}` },
-      { t: "", der: 1, v: (p) => `<button data-ajuste="${p.id_producto}" class="text-[10px] px-2 py-1 rounded bg-blue-50 text-[#2a5298] font-semibold">Ajustar</button>` },
+      { t: "", der: 1, v: (p) => `${Number(p.activo) !== 1 ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-semibold">Inactivo</span> ` : ""}<button data-ajuste="${p.id_producto}" class="text-[10px] px-2 py-1 rounded bg-blue-50 text-[#2a5298] font-semibold">Ajustar</button> ${Number(p.activo) === 1 ? `<button data-baja="${p.id_producto}" class="text-[10px] px-2 py-1 rounded bg-red-50 text-red-600 font-semibold">Dar de baja</button>` : `<button data-alta="${p.id_producto}" class="text-[10px] px-2 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold">Reactivar</button>`}` },
     ], lista, { vacio: "Sin productos que coincidan" })}`,
     `<button data-export="productos" class="text-xs font-semibold text-[#2a5298] border border-[#2a5298] px-3 py-1.5 rounded-lg">Exportar CSV</button>`);
 }
@@ -244,6 +273,32 @@ export function mount(root, ctx) {
     if (aj) {
       const p = mapaProductos().get(+aj.dataset.ajuste);
       if (p) modalAjuste(p);
+      return;
+    }
+
+    const baja = e.target.closest("[data-baja]");
+    if (baja) {
+      const p = mapaProductos().get(+baja.dataset.baja);
+      if (!p) return;
+      if (!(await confirmar(`Dar de baja "${p.nombre_producto}"? Dejará de aparecer en el POS y en las listas operativas, pero su historial se conserva.`, "Dar de baja"))) return;
+      try {
+        await repo.actualizarProducto(p.id_producto, { activo: 0 }, ctxId());
+        toast("Producto dado de baja");
+        await ctx.recargar(); ctx.rerender();
+      } catch (err) { toast(err.message, "error"); }
+      return;
+    }
+
+    const alta = e.target.closest("[data-alta]");
+    if (alta) {
+      const p = mapaProductos().get(+alta.dataset.alta);
+      if (!p) return;
+      if (!(await confirmar(`Reactivar "${p.nombre_producto}"? Volverá a aparecer en el POS y en las listas operativas.`, "Reactivar"))) return;
+      try {
+        await repo.actualizarProducto(p.id_producto, { activo: 1 }, ctxId());
+        toast("Producto reactivado");
+        await ctx.recargar(); ctx.rerender();
+      } catch (err) { toast(err.message, "error"); }
       return;
     }
 

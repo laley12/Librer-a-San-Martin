@@ -1,4 +1,4 @@
-const CACHE = "lsm-v8";
+const CACHE = "lsm-v9";
 const BASE = ["/", "/index.html", "/movil.html", "/manifest.webmanifest", "/icono.svg"];
 const ASSETS = [
   "/assets/app.js", "/assets/ui.js", "/assets/data.js", "/assets/supabase-client.js",

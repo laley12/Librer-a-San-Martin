@@ -6,8 +6,16 @@ export const meta = { id: "usuarios", titulo: "Usuarios & Roles", icono: "🔐",
 
 const ROLES = ["Administrador", "Empleado", "Vendedor"];
 
+/* Baja lógica (HU2/HU3): por defecto se ocultan los usuarios Inactivo;
+   un administrador puede activar "Ver inactivos" para gestionarlos. */
+let verInactivos = false;
+
 export function render() {
   const soyAdmin = esAdmin();
+  const activosCount = state.usuarios.filter((u) => String(u.estado).toLowerCase() === "activo").length;
+  const listaUsuarios = verInactivos
+    ? state.usuarios
+    : state.usuarios.filter((u) => String(u.estado).toLowerCase() === "activo");
   const mios = state.perfiles.length ? state.perfiles : [];
   const rolEfectivo = (u) => state.perfiles.find((p) => Number(p.usuario_id) === Number(u.id))?.rol || u.rol;
 
@@ -49,14 +57,15 @@ export function render() {
         </div>`) : ""}
     </div>
 
-    ${seccion(`Usuarios del sistema (${state.usuarios.length})`, tabla([
+    ${seccion(`Usuarios del sistema (${activosCount} activos)`, tabla([
       { t: "Nombre", v: (u) => `<span class="font-medium">${esc(u.nombre)}</span>` },
       { t: "Usuario", v: (u) => `<span class="font-mono text-[10px] text-slate-500">${esc(u.usuario)}</span>` },
       { t: "Rol", v: (u) => `<span class="text-[10px] px-2 py-0.5 rounded-full ${rolEfectivo(u) === "Administrador" ? "bg-violet-100 text-violet-700" : rolEfectivo(u) === "Empleado" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}">${esc(rolEfectivo(u) || "—")}</span>` },
       { t: "Estado", v: (u) => `<span class="text-[10px] px-2 py-0.5 rounded-full ${String(u.estado).toLowerCase() === "activo" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}">${esc(u.estado || "—")}</span>` },
       { t: "Último acceso", v: (u) => `<span class="text-xs text-slate-400">${u.ultimo_acceso ? fechaHora(u.ultimo_acceso) : "Nunca"}</span>` },
       { t: "", der: 1, v: (u) => soyAdmin ? `<button data-editusr="${u.id}" class="text-[10px] px-2 py-1 rounded bg-blue-50 text-[#2a5298] font-semibold">Editar</button>` : "" },
-    ], state.usuarios, { vacio: "Sin usuarios" }))}
+    ], listaUsuarios, { vacio: "Sin usuarios activos" }),
+      `<button data-toggle-inactivos class="text-[10px] px-2.5 py-1.5 rounded-lg font-semibold shrink-0 border border-slate-200 ${verInactivos ? "bg-[#1e3c72] text-white" : "bg-slate-100 text-slate-600"}">${verInactivos ? `Ocultar inactivos` : `Ver inactivos (${state.usuarios.length - activosCount})`}</button>`)}
 
     ${soyAdmin ? seccion("Perfiles de acceso (vinculados a Supabase Auth)", tabla([
       { t: "Nombre", v: (p) => esc(p.nombre || "—") },
@@ -150,6 +159,8 @@ let _ctx = null;
 export function mount(root, ctx) {
   _ctx = ctx;
   root.addEventListener("click", (e) => {
+    const ti = e.target.closest("[data-toggle-inactivos]");
+    if (ti) { verInactivos = !verInactivos; ctx.rerender(); return; }
     const ed = e.target.closest("[data-editusr]");
     if (ed) return modalUsuario(+ed.dataset.editusr);
     const ep = e.target.closest("[data-editperfil]");

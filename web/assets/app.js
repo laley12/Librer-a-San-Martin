@@ -279,6 +279,7 @@ function dibujar(id) {
   if (cont.dataset.actual === id && m.renderIncremental) m.renderIncremental(cont, html);
   else cont.innerHTML = html;
   cont.dataset.actual = id;
+  if (m.onRender) m.onRender();
   if ($("#titulo")) $("#titulo").textContent = m.meta.titulo;
   if ($("#subtitulo")) $("#subtitulo").textContent = subtitulo(m.meta.id);
   document.title = `${m.meta.titulo} · Librería San Martín`;

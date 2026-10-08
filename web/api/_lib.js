@@ -90,8 +90,13 @@ const ERROR_GENERICO = "Usuario o contraseña incorrectos";
 async function verificarPin(usuario, pin) {
   const correo = correoDeCuenta(usuario);
   if (!correo || !pin) return null;
-  const perfil = (await rest(`perfiles?email=eq.${encodeURIComponent(correo)}&select=id,email&limit=1`))[0];
+  const perfil = (await rest(`perfiles?email=eq.${encodeURIComponent(correo)}&select=id,email,usuario_id&limit=1`))[0];
   if (!perfil) return null;
+  /* Baja lógica (HU2/HU3): un usuario en estado Inactivo no puede iniciar sesión. */
+  if (perfil.usuario_id) {
+    const filaUsuario = (await rest(`usuarios?id=eq.${perfil.usuario_id}&select=estado&limit=1`))[0];
+    if (filaUsuario && String(filaUsuario.estado).toLowerCase() !== "activo") return null;
+  }
   const fila = (await rest(`credenciales?id=eq.${perfil.id}&select=clave_hash&limit=1`))[0];
   if (!fila || !verifyPin(pin, fila.clave_hash)) return null;
   return perfil;

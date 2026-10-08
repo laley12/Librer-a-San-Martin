@@ -4,7 +4,7 @@ import { estadoRealtime, repo, state } from "../data.js";
 
 export const meta = { id: "perfil", titulo: "Mi Perfil", icono: "👤", grupo: "Cuenta" };
 
-export const VERSION = "v1.3";
+export const VERSION = "v1.4";
 
 function datos() {
   const p = _ctx?.perfil || {};
