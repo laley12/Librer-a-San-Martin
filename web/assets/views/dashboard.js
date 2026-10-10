@@ -1,6 +1,6 @@
-import { money, moneyCorto, num, fecha, hace } from "../supabase-client.js";
-import { state, kpisRango, serieRango, rangoFechas, enPeriodo, topProductos, topProveedores, movimientosRecientes, nombreProducto, ventasVigentes } from "../data.js";
-import { kpiCard, seccion, tabla, esc, badgeStock, ICONS } from "../ui.js";
+﻿import { money, moneyCorto, num, fecha } from "../supabase-client.js";
+import { state, kpisRango, serieRango, rangoFechas, enPeriodo, topProductos, topProveedores, nombreProducto, ventasVigentes } from "../data.js";
+import { kpiCard, seccion, tabla, esc, badgeStock } from "../ui.js";
 
 export const meta = { id: "dashboard", titulo: "Dashboard General", icono: "📊", grupo: "Principal" };
 
@@ -11,16 +11,12 @@ export const meta = { id: "dashboard", titulo: "Dashboard General", icono: "📊
 const ATAJOS = [
   { icono: "🛒", t: "Hacer una venta", sub: "Punto de venta", vista: "ventas", tab: "pos",
     caja: "bg-emerald-100 text-emerald-700", borde: "hover:border-emerald-300" },
-  { icono: "💵", t: "La caja", sub: "Abrir o cerrar", vista: "ventas", tab: "caja",
-    caja: "bg-amber-100 text-amber-700", borde: "hover:border-amber-300" },
   { icono: "📋", t: "Ver mis ventas", sub: "Historial del día", vista: "ventas", tab: "historial",
     caja: "bg-sky-100 text-sky-700", borde: "hover:border-sky-300" },
   { icono: "📦", t: "Los productos", sub: "Precios y stock", vista: "inventario", tab: "listado",
     caja: "bg-violet-100 text-violet-700", borde: "hover:border-violet-300" },
   { icono: "⚠️", t: "Poco stock", sub: "Revisar faltantes", vista: "inventario", tab: "stock",
     caja: "bg-rose-100 text-rose-700", borde: "hover:border-rose-300" },
-  { icono: "👥", t: "Los clientes", sub: "Buscar o registrar", vista: "clientes", tab: "lista",
-    caja: "bg-indigo-100 text-indigo-700", borde: "hover:border-indigo-300" },
   { icono: "🚚", t: "Las compras", sub: "A proveedores", vista: "compras", tab: "compras",
     caja: "bg-orange-100 text-orange-700", borde: "hover:border-orange-300" },
   { icono: "👤", t: "Los usuarios", sub: "Altas y permisos", vista: "usuarios", soloAdmin: true,
@@ -115,13 +111,11 @@ export function render() {
   const s = serieRango(rango);
   const maxS = Math.max(...s.map((x) => x.ventas), 1);
   const rc = rangoFechas(rango);
-  const ids = new Set(ventasVigentes().filter((v) => enPeriodo(v.fecha, rc)).map((v) => v.id_venta));
-  const idsCompras = new Set(state.compras.filter((c) => enPeriodo(c.fecha, rc)).map((c) => c.id_compra));
+  const ids = new Set(ventasVigentes().filter((v) => enPeriodo(v.fecha, rc)).map((v) => v.id));
+  const idsCompras = new Set(state.compras.filter((c) => enPeriodo(c.fecha, rc)).map((c) => c.id));
   const top = topProductos(5, ids);
   const maxT = Math.max(...top.map((t) => t.unidades), 1);
   const prov = topProveedores(4, idsCompras);
-  const movs = movimientosRecientes(5);
-  const cajaAbierta = state.apertura_caja.find((a) => Number(a.activo) === 1);
   const bajo = state.productos.filter((p) => Number(p.activo) === 1 && Number(p.stock) <= 5)
     .sort((a, b) => a.stock - b.stock).slice(0, 5);
   const etiqueta = etiquetaRango();
@@ -141,15 +135,6 @@ export function render() {
   return `
   <div class="space-y-4 md:space-y-6 fade">
     ${bloqueAtajos()}
-
-    ${!cajaAbierta ? `
-    <div class="bg-amber-50 border-2 border-amber-300 text-amber-900 rounded-xl px-4 py-3 text-sm flex items-center justify-between gap-3">
-      <div class="flex items-center gap-2">
-        <span class="p-2 bg-amber-100 rounded-lg text-amber-600">${ICONS.alert || '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>'}</span>
-        <span>No hay caja abierta. Los totales del día pueden no cuadrar con el efectivo físico.</span>
-      </div>
-      <button data-ir="ventas" data-params='{"tab":"caja"}' class="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition shrink-0">Abrir caja</button>
-    </div>` : ""}
 
     ${selectorRango()}
 
@@ -188,7 +173,7 @@ export function render() {
       ${kpiCard({
         label: `Utilidad ${etiqueta}`,
         valor: money(k.utilidad),
-        sub: `gastos ${money(k.gastos)}`,
+        sub: `costo de ventas ${money(k.ventas - k.margen)}`,
         icono: "bank",
         color: k.utilidad >= 0 ? "text-violet-600" : "text-red-600",
         iconBg: k.utilidad >= 0 ? "bg-violet-50" : "bg-red-50",
@@ -288,32 +273,23 @@ export function render() {
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       ${seccion("Últimas ventas", tabla([
-        { t: "Venta", v: (v) => `<span class="font-semibold">#${v.id_venta}</span>` },
+        { t: "Venta", v: (v) => `<span class="font-semibold">#${v.id}</span>` },
         { t: "Fecha", v: (v) => `<span class="text-xs text-slate-500">${fecha(v.fecha)}</span>` },
+        { t: "Cliente", v: (v) => esc(v.cliente || "General") },
         { t: "Pago", v: (v) => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100">${esc(v.metodo_pago || "—")}</span>` },
         { t: "Total", der: 1, v: (v) => `<span class="font-semibold text-emerald-600">${money(v.total)}</span>` },
       ], [...ventasVigentes()].filter((v) => enPeriodo(v.fecha, rc)).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 6)), "",
         `<button data-ir="ventas" data-params='{"tab":"historial"}' class="text-xs text-[#2a5298] font-semibold">Ver todo →</button>`)}
 
       ${seccion("Stock bajo", tabla([
-        { t: "Producto", v: (p) => `<span class="font-medium">${esc(p.nombre_producto)}</span>` },
+        { t: "Producto", v: (p) => `<span class="font-medium">${esc(p.nombre)}</span>` },
         { t: "Código", v: (p) => `<span class="font-mono text-[10px] text-slate-400">${esc(p.codigo || "—")}</span>` },
         { t: "Stock", der: 1, v: (p) => `<span class="font-bold">${p.stock}</span>` },
         { t: "", v: (p) => badgeStock(p.stock) },
       ], bajo), "", `<button data-ir="inventario" data-params='{"tab":"stock"}' class="text-xs text-[#2a5298] font-semibold">Inventario →</button>`)}
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      ${seccion("Últimos movimientos de inventario", movs.length ? movs.map((m) => `
-        <div class="flex items-center justify-between text-sm py-1.5 border-b border-slate-50 last:border-0">
-          <div class="min-w-0">
-            <span class="font-semibold ${m.tipo === "SALIDA" ? "text-amber-600" : m.tipo === "AJUSTE" ? "text-sky-600" : "text-emerald-600"}">${m.tipo}</span>
-            <span class="text-slate-600 truncate"> ${esc(nombreProducto(m.id_producto))}</span>
-            <span class="text-[10px] text-slate-400"> · ${hace(m.fecha_hora)}</span>
-          </div>
-          <span class="font-semibold shrink-0">${m.cantidad > 0 ? "+" : ""}${m.cantidad}</span>
-        </div>`).join("") : `<p class="text-sm text-slate-400">Sin movimientos todavía. Se generan al vender, comprar o ajustar.</p>`)}
-
+    <div class="grid grid-cols-1 gap-4">
       ${seccion("Compras por proveedor", tabla([
         { t: "Proveedor", v: (p) => esc(p.nombre) },
         { t: "Compras", der: 1, v: (p) => p.compras },
@@ -430,3 +406,11 @@ export function mount(root, ctx) {
 export function onRender() {
   requestAnimationFrame(() => initChart());
 }
+
+console.log('confetti ok');
+
+window.showWelcome = function() {
+  if (typeof confetti !== 'undefined') {
+    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+  }
+};
