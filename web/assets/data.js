@@ -1,45 +1,23 @@
 import { sb } from "./supabase-client.js";
 
 /* =====================================================================
-   CAPA DE DATOS UNIFICADA
-   - una sola carga para todas las vistas (desktop y móvil)
-   - un solo punto de escritura (repos)
-   - una sola suscripción Realtime
+   CAPA DE DATOS UNIFICADA (esquema ER · 8 tablas)
+   - un solo punto de carga, escritura y suscripción Realtime
+   - ventas: cliente es texto libre (ventas.cliente)
+   - stock: ajuste directo sobre productos.stock (sin movimientos)
+   - sin caja, gastos, recibos, clientes, devoluciones ni auditorías
    ===================================================================== */
 
 export const TABLAS = [
-  "ventas", "detalle_ventas", "recibos", "productos", "categorias", "clientes",
-  "proveedores", "compras", "detalle_compras", "movimientos_inventario", "usuarios",
-  "perfiles", "sucursales", "caja_flujo", "gastos", "apertura_caja", "devoluciones",
-  "detalle_devoluciones", "historial_precios", "config_impresora",
-];
-
-export const TABLAS_AUDITORIA = [
-  { tabla: "auditoria_usuarios", modulo: "Usuarios", columnas: "id_auditoria, id_usuario, accion, fecha_hora" },
-  { tabla: "auditoria_productos", modulo: "Productos", columnas: "id_auditoria, id_usuario, accion, fecha_hora" },
-  { tabla: "auditoria_ventas", modulo: "Ventas", columnas: "id_auditoria, id_usuario, accion, fecha_hora" },
-  { tabla: "auditoria_compras", modulo: "Compras", columnas: "id_auditoria, id_usuario, accion, fecha_hora" },
-  { tabla: "auditoria_proveedores", modulo: "Proveedores", columnas: "id_auditoria, id_usuario, accion, fecha_hora" },
-  { tabla: "auditoria_categorias", modulo: "Categorías", columnas: "id_auditoria, id_usuario, accion, fecha_hora" },
-  { tabla: "auditoria_clientes", modulo: "Clientes", columnas: "id_auditoria, accion, fecha_hora" },
-  { tabla: "auditoria_inventario", modulo: "Inventario", columnas: "id_auditoria, id_usuario, accion, fecha_hora" },
+  "usuarios", "categorias", "proveedores", "productos",
+  "compras", "detalle_compras", "ventas", "detalle_ventas",
 ];
 
 export const state = { cargando: false, errores: [], ultimaCarga: null };
 TABLAS.forEach((t) => (state[t] = []));
-TABLAS_AUDITORIA.forEach((a) => (state[a.tabla] = []));
 
-/* Negocio de sede única: todas las transacciones se registran en la
-   sucursal principal (la primera activa; siempre existe la #1). */
-export function sucursalDefecto() {
-  const principal = state.sucursales.find((s) => Number(s.activo) === 1);
-  return principal ? principal.id_sucursal : 1;
-}
-
-/* Estado del canal Realtime, para mostrarlo en la vista de perfil. */
 export let estadoRealtime = false;
 
-/* ---------------- carga ---------------- */
 async function traer(tabla, columnas = "*") {
   const { data, error } = await sb.from(tabla).select(columnas).limit(2000);
   if (error) {
@@ -51,17 +29,13 @@ async function traer(tabla, columnas = "*") {
 
 export async function cargarTodo() {
   state.cargando = true;
-  const resultados = await Promise.all([
-    ...TABLAS.map((t) => traer(t)),
-    ...TABLAS_AUDITORIA.map((a) => traer(a.tabla, a.columnas)),
-  ]);
-  [...TABLAS, ...TABLAS_AUDITORIA.map((a) => a.tabla)].forEach((t, i) => (state[t] = resultados[i]));
+  const resultados = await Promise.all(TABLAS.map((t) => traer(t)));
+  TABLAS.forEach((t, i) => (state[t] = resultados[i]));
   state.ultimaCarga = new Date();
   state.cargando = false;
   return state;
 }
 
-/* ---------------- escrituras ---------------- */
 async function insertar(tabla, fila) {
   const { data, error } = await sb.from(tabla).insert(fila).select().single();
   if (error) throw new Error(`${tabla}: ${error.message}`);
@@ -76,246 +50,142 @@ async function actualizar(tabla, patch, filtro) {
   return data;
 }
 
-async function auditar(tabla, idUsuario, accion) {
-  const meta = TABLAS_AUDITORIA.find((a) => a.tabla === tabla);
-  const fila = { accion, fecha_hora: new Date().toISOString() };
-  if (meta?.columnas.includes("id_usuario")) fila.id_usuario = idUsuario;
-  const { error } = await sb.from(tabla).insert(fila);
-  if (error) console.warn("auditoría no registrada:", tabla, error.message);
+async function tokenActual() {
+  const { data } = await sb.auth.getSession();
+  return data?.session?.access_token || "";
+}
+
+export function esActivo(fila) {
+  return fila && Number(fila.activo ?? fila.estado) === 1;
 }
 
 export const repo = {
-  /* ---- Ventas & Caja ---- */
-  async registrarVenta({ clienteId, metodoPago, lineas, idUsuario, estado = "Completado" }) {
+  /* ---- Ventas ---- */
+  async registrarVenta({ cliente, metodoPago, lineas, idUsuario }) {
     if (!lineas.length) throw new Error("Agrega al menos un producto");
-    const total = lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
+    const total = lineas.reduce((s, l) => s + Number(l.cantidad) * Number(l.precio), 0);
     const venta = await insertar("ventas", {
       fecha: new Date().toISOString().slice(0, 10),
       total,
       metodo_pago: metodoPago,
-      id_usuario: idUsuario,
-      id_cliente: clienteId || null,
-      estado,
-      sucursal_id: sucursalDefecto(),
+      cliente: String(cliente || "").trim() || "General",
+      usuario_id: idUsuario || null,
     });
     for (const l of lineas) {
       await insertar("detalle_ventas", {
-        venta_id: venta.id_venta, producto_id: l.productoId, cantidad: l.cantidad, precio: l.precio,
+        venta_id: venta.id, producto_id: l.productoId, cantidad: l.cantidad, precio_unitario: l.precio,
       });
     }
-    const recibo = await insertar("recibos", {
-      venta_id: venta.id_venta,
-      numero_recibo: `R-${String(venta.id_venta).padStart(6, "0")}`,
-      sucursal_id: sucursalDefecto(),
-    });
-    await auditar("auditoria_ventas", idUsuario, `Registró venta #${venta.id_venta} por Bs ${total.toFixed(2)}`);
-    return { venta, recibo, total };
-  },
-
-  async anularVenta(ventaId, idUsuario) {
-    const venta = state.ventas.find((v) => v.id_venta === ventaId);
-    if (!venta) throw new Error("La venta no existe");
-    if (String(venta.estado).toLowerCase() === "anulado") throw new Error("La venta ya está anulada");
-    const det = state.detalle_ventas.filter((d) => d.venta_id === ventaId);
-    for (const d of det) {
-      await insertar("movimientos_inventario", {
-        id_producto: d.producto_id, tipo: "AJUSTE", cantidad: d.cantidad,
-        motivo: `Anulación venta #${ventaId}`, id_usuario: idUsuario,
-        sucursal_id: sucursalDefecto(),
-      });
-    }
-    await actualizar("ventas", { estado: "Anulado" }, { id_venta: ventaId });
-    await auditar("auditoria_ventas", idUsuario, `Anuló venta #${ventaId} y devolvió el stock`);
-    return { ventaId, lineas: det.length };
-  },
-
-  async devolverVenta({ ventaId, lineas, motivo, idUsuario }) {
-    const venta = state.ventas.find((v) => v.id_venta === ventaId);
-    if (!venta) throw new Error("La venta no existe");
-    const devolucion = await insertar("devoluciones", {
-      id_venta: ventaId, id_usuario: idUsuario, motivo: motivo || null,
-      total_devuelto: lineas.reduce((s, l) => s + l.cantidad * l.precio_unitario, 0),
-      fecha: new Date().toISOString(),
-      sucursal_id: sucursalDefecto(),
-    });
-    for (const l of lineas) {
-      await insertar("detalle_devoluciones", {
-        id_devolucion: devolucion.id_devolucion, id_producto: l.productoId,
-        cantidad: l.cantidad, precio_unitario: l.precio_unitario,
-        subtotal: l.cantidad * l.precio_unitario,
-      });
-      await insertar("movimientos_inventario", {
-        id_producto: l.productoId, tipo: "AJUSTE", cantidad: l.cantidad,
-        motivo: `Devolución venta #${ventaId}`, id_usuario: idUsuario,
-        sucursal_id: sucursalDefecto(),
-      });
-    }
-    await auditar("auditoria_ventas", idUsuario, `Registró devolución #${devolucion.id_devolucion} de la venta #${ventaId}`);
-    return devolucion;
-  },
-
-  async abrirCaja({ montoInicial, idUsuario, observaciones }) {
-    return insertar("apertura_caja", {
-      id_usuario: idUsuario, monto_inicial: montoInicial, monto_esperado: montoInicial,
-      observaciones: observaciones || null, fecha_apertura: new Date().toISOString(),
-      sucursal_id: sucursalDefecto(),
-    });
-  },
-
-  async cerrarCaja({ montoFinal, idUsuario, observaciones }) {
-    const abierta = state.apertura_caja.find((a) => Number(a.activo) === 1);
-    if (!abierta) throw new Error("No hay una caja abierta");
-    return actualizar("apertura_caja",
-      {
-        monto_final: montoFinal,
-        fecha_cierre: new Date().toISOString(),
-        activo: 0,
-        observaciones: observaciones ? `${abierta.observaciones ? abierta.observaciones + " | " : ""}Cierre: ${observaciones}` : abierta.observaciones,
-      },
-      { id: abierta.id });
-  },
-
-  async crearFlujoCaja({ montoApertura, idUsuario }) {
-    return insertar("caja_flujo", {
-      id_usuario: idUsuario, monto_apertura: montoApertura, estado: "ABIERTA",
-      fecha_apertura: new Date().toISOString(),
-      sucursal_id: sucursalDefecto(),
-    });
-  },
-
-  async cerrarFlujoCaja({ id, montoCierre }) {
-    return actualizar("caja_flujo",
-      { monto_cierre: montoCierre, estado: "CERRADA", fecha_cierre: new Date().toISOString() }, { id_caja: id });
-  },
-
-  async crearGasto({ descripcion, monto, idUsuario, categoria = "Operativo" }) {
-    const g = await insertar("gastos", {
-      descripcion, monto, id_usuario: idUsuario, fecha: new Date().toISOString(),
-      sucursal_id: sucursalDefecto(),
-    });
-    await auditar("auditoria_ventas", idUsuario, `Registró gasto: ${descripcion} Bs ${monto}`);
-    return g;
+    return { venta, total };
   },
 
   /* ---- Productos & Inventario ---- */
-  async ajustarStock({ productoId, cantidad, motivo, idUsuario }) {
-    const m = await insertar("movimientos_inventario", {
-      id_producto: productoId, tipo: "AJUSTE", cantidad, motivo, id_usuario: idUsuario,
-      fecha_hora: new Date().toISOString(),
-      sucursal_id: sucursalDefecto(),
-    });
-    await auditar("auditoria_inventario", idUsuario, `Ajustó stock del producto #${productoId}: ${cantidad > 0 ? "+" : ""}${cantidad}`);
-    return m;
-  },
-
-  async crearProducto(datos, idUsuario) {
-    const p = await insertar("productos", datos);
-    await auditar("auditoria_productos", idUsuario, `Creó producto: ${datos.nombre_producto}`);
-    return p;
-  },
-
-  async actualizarProducto(id, datos, idUsuario) {
-    const anterior = state.productos.find((p) => p.id_producto === id);
-    const p = await actualizar("productos", datos, { id_producto: id });
-    if (anterior && (datos.precio != null || datos.precio_compra != null)) {
-      const antes = Number(anterior.precio || 0), ahora = Number(p.precio || 0);
-      if (antes !== ahora) {
-        await insertar("historial_precios", {
-          id_producto: id, precio_anterior: antes, precio_nuevo: ahora,
-          tipo: "VENTA", id_usuario: idUsuario,
-          fecha_hora: new Date().toISOString(),
-        }).catch(() => {});
-      }
+  async ajustarStock({ productoId, stock }) {
+    if (stock == null || Number.isNaN(Number(stock)) || Number(stock) < 0) {
+      throw new Error("Indica una cantidad válida");
     }
-    await auditar("auditoria_productos", idUsuario, `Actualizó producto #${id}`);
-    return p;
+    return actualizar("productos", { stock: Number(stock) }, { id: productoId });
   },
 
-  async crearCategoria(datos, idUsuario) {
-    const c = await insertar("categorias", datos);
-    await auditar("auditoria_categorias", idUsuario, `Creó categoría: ${datos.nombre_categoria}`);
-    return c;
+  async crearProducto(datos) {
+    return insertar("productos", {
+      nombre: datos.nombre,
+      codigo: datos.codigo || null,
+      categoria_id: datos.categoria_id || null,
+      precio_venta: Number(datos.precio_venta ?? datos.precio ?? 0),
+      stock: Number(datos.stock ?? 0),
+      activo: true,
+    });
+  },
+
+  async actualizarProducto(id, datos) {
+    const patch = { ...datos };
+    if (patch.precio_venta != null) patch.precio_venta = Number(patch.precio_venta);
+    return actualizar("productos", patch, { id });
+  },
+
+  async crearCategoria({ nombre, descripcion }) {
+    if (!String(nombre || "").trim()) throw new Error("Escribe el nombre de la categoría");
+    return insertar("categorias", { nombre, descripcion: descripcion || null });
   },
 
   /* ---- Compras & Proveedores ---- */
-  async registrarCompra({ proveedorId, nroFactura, lineas, idUsuario }) {
+  async registrarCompra({ proveedorId, lineas, idUsuario }) {
     if (!lineas.length) throw new Error("Agrega al menos un producto");
-    const total = lineas.reduce((s, l) => s + l.cantidad * l.precio, 0);
+    const total = lineas.reduce((s, l) => s + Number(l.cantidad) * Number(l.precio), 0);
     const compra = await insertar("compras", {
-      proveedor_id: proveedorId || null, nro_factura: nroFactura || null,
-      fecha: new Date().toISOString().slice(0, 10), total,
-      sucursal_id: sucursalDefecto(),
+      proveedor_id: proveedorId || null,
+      usuario_id: idUsuario || null,
+      fecha: new Date().toISOString().slice(0, 10),
+      total,
     });
     for (const l of lineas) {
       await insertar("detalle_compras", {
-        compra_id: compra.id_compra, producto_id: l.productoId, cantidad: l.cantidad, precio: l.precio,
+        compra_id: compra.id, producto_id: l.productoId,
+        cantidad: l.cantidad, precio_unitario: l.precio,
       });
     }
-    await auditar("auditoria_compras", idUsuario, `Registró compra #${compra.id_compra} por Bs ${total.toFixed(2)}`);
     return { compra, total };
   },
 
-  async crearProveedor(datos, idUsuario) {
-    const p = await insertar("proveedores", datos);
-    await auditar("auditoria_proveedores", idUsuario, `Creó proveedor: ${datos.nombre}`);
-    return p;
+  async crearProveedor(datos) {
+    return insertar("proveedores", {
+      nombre: datos.nombre,
+      contacto: datos.contacto || null,
+      telefono: datos.telefono || null,
+    });
   },
 
-  async actualizarProveedor(id, datos, idUsuario) {
-    const p = await actualizar("proveedores", datos, { id_proveedor: id });
-    await auditar("auditoria_proveedores", idUsuario, `Actualizó proveedor #${id}`);
-    return p;
+  async actualizarProveedor(id, datos) {
+    return actualizar("proveedores", datos, { id });
   },
 
-  /* ---- Clientes ---- */
-  async crearCliente(datos, idUsuario) {
-    const c = await insertar("clientes", datos);
-    await auditar("auditoria_clientes", idUsuario, `Creó cliente: ${datos.nombre_cliente}`);
-    return c;
-  },
-
-  async actualizarCliente(id, datos, idUsuario) {
-    const c = await actualizar("clientes", datos, { id_cliente: id });
-    await auditar("auditoria_clientes", idUsuario, `Actualizó cliente #${id}`);
-    return c;
-  },
-
-  /* ---- Usuarios ---- */
-  async actualizarUsuario(id, datos, idUsuario) {
-    return actualizar("usuarios", datos, { id });
-  },
-
-  async actualizarPerfil(uuid, datos) {
-    return actualizar("perfiles", datos, { id: uuid });
-  },
-
-  /* El rol que manda es perfiles.rol; usuarios.rol es la columna legacy. */
+  /* ---- Usuarios (tabla única) ---- */
   async guardarUsuario({ usuarioId, nombre, rol, estado, idUsuario }) {
-    const u = await actualizar("usuarios", { nombre, rol, estado }, { id: usuarioId });
-    const perfil = state.perfiles.find((p) => Number(p.usuario_id) === Number(usuarioId));
-    if (perfil) {
-      await actualizar("perfiles", { rol, nombre }, { id: perfil.id });
-    }
-    await auditar("auditoria_usuarios", idUsuario,
-      `Actualizó usuario #${usuarioId}: rol ${rol}, estado ${estado}`);
-    return { usuario: u, perfilActualizado: Boolean(perfil) };
+    const booleano = estado === true || String(estado).toLowerCase() === "activo";
+    return actualizar("usuarios", { nombre, rol, estado: booleano }, { id: usuarioId });
   },
 
-  /* Sede única: el perfil siempre queda vinculado a la sucursal principal. */
-  async guardarPerfil({ perfilId, rol, nombre, idUsuario }) {
-    const p = await actualizar("perfiles",
-      { rol, nombre, sucursal_id: sucursalDefecto() }, { id: perfilId });
-    const vinculado = state.usuarios.find((u) => Number(u.id) === Number(p.usuario_id));
-    if (vinculado) await actualizar("usuarios", { rol, nombre }, { id: vinculado.id });
-    await auditar("auditoria_usuarios", idUsuario, `Actualizó perfil de acceso #${p.usuario_id}: rol ${rol}`);
-    return p;
+  async cambiarEstadoUsuario({ usuarioId, estado, idUsuario }) {
+    const booleano = estado === true || String(estado).toLowerCase() === "activo";
+    return actualizar("usuarios", { estado: booleano }, { id: usuarioId });
   },
 
-  /* ---- Ajustes ---- */
-  async guardarConfigImpresora(datos) {
-    const actual = state.config_impresora[0];
-    if (actual) return actualizar("config_impresora", datos, { id: actual.id });
-    return insertar("config_impresora", datos);
+  async crearUsuario({ nombre, usuario, pin, rol, estado, idUsuario }) {
+    const token = await tokenActual();
+    const r = await fetch("/api/usuarios-nuevo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ nombre, usuario, pin, rol, estado }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `No se pudo crear el usuario (${r.status})`);
+    return j;
+  },
+
+  async cambiarPin({ usuarioId, pin }) {
+    const token = await tokenActual();
+    const r = await fetch("/api/usuario-pin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ usuario_id: usuarioId, pin }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `No se pudo restablecer el PIN (${r.status})`);
+    return j;
+  },
+
+  async cambiarNombrePropio({ usuarioId, nombre }) {
+    return actualizar("usuarios", { nombre }, { id: usuarioId });
+  },
+
+  async actualizarPerfilPropio({ usuarioId, nombre, usuario, email, foto }) {
+    const patch = {};
+    if (nombre !== undefined) patch.nombre = nombre;
+    if (usuario !== undefined) patch.usuario = usuario;
+    if (email !== undefined) patch.email = email;
+    if (foto !== undefined) patch.foto = foto;
+    return actualizar("usuarios", patch, { id: usuarioId });
   },
 };
 
@@ -323,8 +193,7 @@ export const repo = {
 let canal = null;
 export function conectarRealtime(cb) {
   if (canal) return canal;
-  const tablas = ["ventas", "detalle_ventas", "productos", "movimientos_inventario",
-    "compras", "clientes", "proveedores", "caja_flujo", "apertura_caja"];
+  const tablas = ["ventas", "detalle_ventas", "productos", "compras"];
   canal = sb.channel("lsm-todo");
   for (const t of tablas) {
     canal.on("postgres_changes", { event: "*", schema: "public", table: t }, (p) => cb(t, p));
@@ -338,15 +207,33 @@ export function conectarRealtime(cb) {
 
 /* ---------------- cálculos compartidos ---------------- */
 export function ventasVigentes() {
-  return state.ventas.filter((v) => String(v.estado || "Completado").toLowerCase() !== "anulado");
+  return state.ventas;
 }
 
 export function mapaProductos() {
-  return new Map(state.productos.map((p) => [p.id_producto, p]));
+  return new Map(state.productos.map((p) => [p.id, p]));
 }
 
 export function nombreProducto(id) {
-  return mapaProductos().get(id)?.nombre_producto || `Producto #${id}`;
+  return mapaProductos().get(id)?.nombre || `Producto #${id}`;
+}
+
+function mapaCompras() {
+  return new Map(state.compras.map((c) => [c.id, c]));
+}
+
+/* Último precio de compra conocido por producto (proxy de costo unitario). */
+export function costoUnitario(id) {
+  let mejor = 0, mejorFecha = "";
+  for (const d of state.detalle_compras) {
+    if (String(d.producto_id) !== String(id)) continue;
+    const f = String(mapaCompras().get(d.compra_id)?.fecha || "").slice(0, 10);
+    if (!mejorFecha || f > mejorFecha) {
+      mejor = Number(d.precio_unitario || 0);
+      mejorFecha = f;
+    }
+  }
+  return mejor;
 }
 
 /* ---------------- filtros por rango de fechas (HU9) ---------------- */
@@ -354,8 +241,6 @@ function isoFechaAShort(d) {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-/* Convierte la opción de rango en límites [inicio, fin] (YYYY-MM-DD).
-   opcion: "hoy" | "semana" | "mes" | "personalizado". "semana" inicia el lunes. */
 export function rangoFechas({ opcion = "mes", inicio = "", fin = "" } = {}) {
   const hoy = new Date();
   const hoyIso = isoFechaAShort(hoy);
@@ -379,35 +264,27 @@ export function enPeriodo(fecha, { inicio, fin }) {
   return k >= inicio && k <= fin;
 }
 
-/* KPIs recalculados según el rango de fechas. El inventario es de corte:
-   no depende del período, solo de qué productos siguen activos. */
 export function kpisRango(r) {
   const rc = rangoFechas(r);
-  const vigentes = ventasVigentes();
-  const v = vigentes.filter((x) => enPeriodo(x.fecha, rc));
-  const ids = new Set(v.map((x) => x.id_venta));
+  const v = state.ventas.filter((x) => enPeriodo(x.fecha, rc));
+  const ids = new Set(v.map((x) => x.id));
   const detalle = state.detalle_ventas.filter((d) => ids.has(d.venta_id));
   const unidades = detalle.reduce((s, d) => s + Number(d.cantidad || 0), 0);
   const ventas = v.reduce((s, x) => s + Number(x.total || 0), 0);
-  const costo = detalle.reduce((s, d) => {
-    const p = state.productos.find((z) => z.id_producto === d.producto_id);
-    return s + Number(d.cantidad || 0) * Number(p?.precio_compra || 0);
-  }, 0);
+  const costo = detalle.reduce((s, d) => s + Number(d.cantidad || 0) * costoUnitario(d.producto_id), 0);
   const comprasTbl = state.compras.filter((c) => enPeriodo(c.fecha, rc));
   const compras = comprasTbl.reduce((s, c) => s + Number(c.total || 0), 0);
-  const gastos = state.gastos.filter((g) => enPeriodo(g.fecha, rc)).reduce((s, g) => s + Number(g.monto || 0), 0);
   const activos = state.productos.filter((p) => Number(p.activo) === 1);
   return {
     inicio: rc.inicio, fin: rc.fin,
     ventas, count: v.length, unidades, ticket: v.length ? ventas / v.length : 0,
     compras, comprasCount: comprasTbl.length,
-    margen: ventas - costo, gastos, utilidad: ventas - costo - gastos,
+    margen: ventas - costo, utilidad: ventas - costo,
     productos: activos.length,
     stockBajo: activos.filter((p) => Number(p.stock) <= 5).length,
     agotados: activos.filter((p) => Number(p.stock) <= 0).length,
-    valorInventario: activos.reduce((s, p) => s + Number(p.stock || 0) * Number(p.precio_compra || p.precio || 0), 0),
-    clientes: state.clientes.filter((c) => Number(c.activo) === 1).length,
-    proveedores: state.proveedores.filter((p) => Number(p.activo) === 1).length,
+    valorInventario: activos.reduce((s, p) => s + Number(p.stock || 0) * (costoUnitario(p.id) || Number(p.precio_venta || 0)), 0),
+    proveedores: state.proveedores.length,
   };
 }
 
@@ -420,7 +297,7 @@ export function serieRango(r) {
   for (let x = new Date(d); x.getTime() <= fin.getTime(); x.setDate(x.getDate() + 1)) {
     m.set(isoFechaAShort(x), { ventas: 0, compras: 0 });
   }
-  for (const v of ventasVigentes()) {
+  for (const v of state.ventas) {
     const k = String(v.fecha).slice(0, 10);
     if (m.has(k)) m.get(k).ventas += Number(v.total || 0);
   }
@@ -434,23 +311,17 @@ export function serieRango(r) {
 export function kpis() {
   const hoy = new Date().toISOString().slice(0, 10);
   const mes = hoy.slice(0, 7);
-  const vigentes = ventasVigentes();
-  const vHoy = vigentes.filter((v) => String(v.fecha).slice(0, 10) === hoy);
-  const vMes = vigentes.filter((v) => String(v.fecha).slice(0, 7) === mes);
-  const idsHoy = new Set(vHoy.map((v) => v.id_venta));
+  const vHoy = state.ventas.filter((v) => String(v.fecha).slice(0, 10) === hoy);
+  const vMes = state.ventas.filter((v) => String(v.fecha).slice(0, 7) === mes);
+  const idsHoy = new Set(vHoy.map((v) => v.id));
   const unidades = state.detalle_ventas.filter((d) => idsHoy.has(d.venta_id))
     .reduce((s, d) => s + Number(d.cantidad || 0), 0);
   const activos = state.productos.filter((p) => Number(p.activo) === 1);
   const comprasMes = state.compras.filter((c) => String(c.fecha).slice(0, 7) === mes);
   const costoVentasMes = state.detalle_ventas
-    .filter((d) => vMes.some((v) => v.id_venta === d.venta_id))
-    .reduce((s, d) => {
-      const p = state.productos.find((x) => x.id_producto === d.producto_id);
-      return s + Number(d.cantidad || 0) * Number(p?.precio_compra || 0);
-    }, 0);
+    .filter((d) => vMes.some((v) => v.id === d.venta_id))
+    .reduce((s, d) => s + Number(d.cantidad || 0) * costoUnitario(d.producto_id), 0);
   const ingresosMes = vMes.reduce((s, v) => s + Number(v.total || 0), 0);
-  const gastosMes = state.gastos.filter((g) => String(g.fecha).slice(0, 7) === mes)
-    .reduce((s, g) => s + Number(g.monto || 0), 0);
   return {
     hoyTotal: vHoy.reduce((s, v) => s + Number(v.total || 0), 0),
     hoyCount: vHoy.length,
@@ -461,15 +332,13 @@ export function kpis() {
     comprasMes: comprasMes.reduce((s, c) => s + Number(c.total || 0), 0),
     comprasMesCount: comprasMes.length,
     margen: ingresosMes - costoVentasMes,
-    gastosMes,
-    utilidadMes: ingresosMes - costoVentasMes - gastosMes,
+    utilidadMes: ingresosMes - costoVentasMes,
+    ingresosDia: vHoy.reduce((s, v) => s + Number(v.total || 0), 0),
     productos: activos.length,
     stockBajo: activos.filter((p) => Number(p.stock) <= 5).length,
     agotados: activos.filter((p) => Number(p.stock) <= 0).length,
-    valorInventario: activos.reduce((s, p) => s + Number(p.stock || 0) * Number(p.precio_compra || p.precio || 0), 0),
-    clientes: state.clientes.filter((c) => Number(c.activo) === 1).length,
-    proveedores: state.proveedores.filter((p) => Number(p.activo) === 1).length,
-    movimientos: state.movimientos_inventario.length,
+    valorInventario: activos.reduce((s, p) => s + Number(p.stock || 0) * (costoUnitario(p.id) || Number(p.precio_venta || 0)), 0),
+    proveedores: state.proveedores.length,
   };
 }
 
@@ -480,7 +349,7 @@ export function serie(dias = 7) {
     d.setDate(d.getDate() - i);
     m.set(d.toISOString().slice(0, 10), { ventas: 0, compras: 0 });
   }
-  for (const v of ventasVigentes()) {
+  for (const v of state.ventas) {
     const k = String(v.fecha).slice(0, 10);
     if (m.has(k)) m.get(k).ventas += Number(v.total || 0);
   }
@@ -492,67 +361,31 @@ export function serie(dias = 7) {
 }
 
 export function topProductos(n = 5, idsVentas) {
-  const ids = idsVentas instanceof Set ? idsVentas : new Set(ventasVigentes().map((v) => v.id_venta));
+  const ids = idsVentas instanceof Set ? idsVentas : new Set(state.ventas.map((v) => v.id));
   const m = new Map();
   for (const d of state.detalle_ventas) {
     if (!ids.has(d.venta_id)) continue;
     const a = m.get(d.producto_id) || { unidades: 0, ingresos: 0, costo: 0 };
     a.unidades += Number(d.cantidad || 0);
-    a.ingresos += Number(d.cantidad || 0) * Number(d.precio || 0);
+    a.ingresos += Number(d.cantidad || 0) * Number(d.precio_unitario || 0);
     m.set(d.producto_id, a);
   }
-  return [...m.entries()].map(([id, v]) => ({ id, ...v, ...nombre(id) }))
+  return [...m.entries()].map(([id, v]) => {
+    const p = state.productos.find((x) => x.id === id);
+    return { id, ...v, nombre: p?.nombre || `#${id}`, codigo: p?.codigo || "—" };
+  })
     .sort((a, b) => b.unidades - a.unidades).slice(0, n);
-  function nombre(id) {
-    const p = state.productos.find((x) => x.id_producto === id);
-    return { nombre: p?.nombre_producto || `#${id}`, codigo: p?.codigo || "—" };
-  }
 }
 
 export function topProveedores(n = 5, idsCompras) {
   const compras = idsCompras instanceof Set
-    ? state.compras.filter((c) => idsCompras.has(c.id_compra))
+    ? state.compras.filter((c) => idsCompras.has(c.id))
     : state.compras;
   return state.proveedores.map((p) => {
-    const cs = compras.filter((c) => c.proveedor_id === p.id_proveedor);
+    const cs = compras.filter((c) => c.proveedor_id === p.id);
     return {
-      id: p.id_proveedor, nombre: p.nombre,
+      id: p.id, nombre: p.nombre,
       compras: cs.length, total: cs.reduce((s, c) => s + Number(c.total || 0), 0),
     };
   }).sort((a, b) => b.total - a.total).slice(0, n);
-}
-
-export function topClientes(n = 5, idsVentas) {
-  const ventas = idsVentas instanceof Set
-    ? state.ventas.filter((v) => idsVentas.has(v.id_venta))
-    : ventasVigentes();
-  return state.clientes.map((c) => {
-    const vs = ventas.filter((v) => v.id_cliente === c.id_cliente);
-    return {
-      id: c.id_cliente, nombre: c.nombre_cliente,
-      compras: vs.length, total: vs.reduce((s, v) => s + Number(v.total || 0), 0),
-    };
-  }).sort((a, b) => b.total - a.total).slice(0, n);
-}
-
-export function movimientosRecientes(n = 10) {
-  return [...state.movimientos_inventario]
-    .sort((a, b) => new Date(b.fecha_hora) - new Date(a.fecha_hora)).slice(0, n);
-}
-
-export function auditTrail(filtro = "Todas", busqueda = "") {
-  const q = busqueda.trim().toLowerCase();
-  const filas = [];
-  for (const a of TABLAS_AUDITORIA) {
-    if (filtro !== "Todas" && filtro !== a.modulo) continue;
-    for (const r of state[a.tabla]) {
-      if (q && !String(r.accion || "").toLowerCase().includes(q)) continue;
-      filas.push({
-        modulo: a.modulo, accion: r.accion,
-        fecha: r.fecha_hora,
-        usuario: state.usuarios.find((u) => u.id === r.id_usuario)?.nombre || "Sistema",
-      });
-    }
-  }
-  return filas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 }

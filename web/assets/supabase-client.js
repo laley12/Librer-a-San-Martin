@@ -113,26 +113,26 @@ export async function perfilActual() {
   console.log('[LSM] perfilActual - getUser result:', auth?.user ? 'user exists' : 'no user', authError ? authError.message : 'no error');
   if (authError) console.error('[LSM] perfilActual - auth error:', authError);
   if (!auth?.user) return null;
-  const { data, error: perfilError } = await sb.from("perfiles").select("*").eq("id", auth.user.id).maybeSingle();
-  console.log('[LSM] perfilActual - perfiles query:', data ? 'found' : 'not found', perfilError ? perfilError.message : 'no error');
-  if (perfilError) console.error('[LSM] perfilActual - perfiles error:', perfilError);
-  const legacy = (data?.usuario_id ?? null);
-  let nombre = data?.nombre || usuarioDeCorreo(auth.user.email);
+  const usuario = usuarioDeCorreo(auth.user.email).toLowerCase();
+  const { data, error } = await sb.from("usuarios")
+    .select("id,nombre,usuario,rol,estado,foto,email")
+    .eq("usuario", usuario).maybeSingle();
+  console.log('[LSM] perfilActual - usuarios query:', data ? 'found' : 'not found', error ? error.message : 'no error');
+  if (error) console.error('[LSM] perfilActual - usuarios error:', error);
+  const rol = data?.rol || "Empleado";
   return {
     id: auth.user.id,
-    email: auth.user.email,
-    usuario: usuarioDeCorreo(auth.user.email),
-    correoCuenta: data?.email || auth.user.email,
-    rol: data?.rol || "Empleado",
-    nombre,
-    usuarioId: legacy,
-    sucursalId: data?.sucursal_id ?? null,
-    foto: data?.foto || null,
-    telefono: data?.telefono || "",
-    correoContacto: data?.correo_contacto || "",
-    esAdmin: (data?.rol || "") === "Administrador",
-    pinObligatorio: !!data?.pin_obligatorio,
-    debeCambiarClave: !!data?.pin_obligatorio || !!data?.debe_cambiar_clave,
+    email: data?.email || auth.user.email,
+    usuario: data?.usuario || usuario,
+    correoCuenta: auth.user.email,
+    rol,
+    nombre: data?.nombre || usuario,
+    foto: data?.foto || "",
+    usuarioId: data?.id ?? null,
+    activo: Boolean(data) && (data.estado === true || Number(data.estado) === 1),
+    esAdmin: rol === "Administrador",
+    pinObligatorio: false,
+    debeCambiarClave: false,
   };
 }
 

@@ -13,7 +13,7 @@ export function esc(s) {
 
 /* ---------------- Toast ---------------- */
 let toastTimer;
-export function toast(mensaje, tipo = "ok") {
+export function toast(mensaje, tipo = "ok", ms = 3200) {
   let t = $("#toast");
   if (!t) {
     t = document.createElement("div");
@@ -21,11 +21,11 @@ export function toast(mensaje, tipo = "ok") {
     document.body.appendChild(t);
   }
   t.className = `fixed z-[999] left-1/2 -translate-x-1/2 bottom-24 md:bottom-8 px-4 py-2.5 rounded-xl shadow-xl text-white text-sm font-medium transition ${
-    tipo === "error" ? "bg-red-600" : tipo === "warn" ? "bg-amber-500" : "bg-slate-900"}`;
+    tipo === "error" ? "bg-red-600" : tipo === "warn" ? "bg-amber-500" : "bg-emerald-600"}`;
   t.textContent = mensaje;
   t.style.opacity = "1";
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.style.opacity = "0"), 3200);
+  toastTimer = setTimeout(() => (t.style.opacity = "0"), ms);
 }
 
 /* ---------------- Modal ---------------- */
