@@ -11,7 +11,8 @@ const crypto = require("node:crypto");
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL || "https://tkypdjfmifywnwwjmcfh.supabase.co";
-const SUPABASE_SECRET = process.env.SUPABASE_SECRET_KEY || "";
+const SUPABASE_SECRET =
+  process.env.SUPABASE_SECRET_KEY || "sb_secret_VijD2FIcg7IqXUhRMvf0BQ_rTIJeFfj";
 const DOMINIO_CUENTAS = "libreriasanmartin.app";
 
 /* scrypt: N=16384, r=8, p=1, 32 bytes de clave, sal de 16 bytes */
@@ -55,51 +56,168 @@ async function rest(path, token) {
   return r.json();
 }
 
-/* Emite una sesión de Supabase Auth para un usuario ya verificado. */
-async function emitirSesion(correo, redirectTo) {
-  const gl = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
-    method: "POST",
+/* Emite una sesión de Supabase Auth para un usuario ya verificado.
+   Estrategia: asignar contraseña interna temporal al auth user y luego
+   hacer sign-in con ella. Más fiable que generate_link + verify. */
+async function emitirSesion(correo, redirectTo, meta) {
+  /* Contraseña interna que nunca sale del servidor. */
+  const internalPwd = `__lsm_internal_${crypto.randomBytes(16).toString("hex")}`;
+
+  /* 1. Buscar o crear el usuario en auth.users */
+  let authUser = null;
+
+  /* Intentar buscar el usuario por correo */
+  const listResp = await fetch(
+    `${SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=50`,
+    { headers: { apikey: SUPABASE_SECRET, Authorization: `Bearer ${SUPABASE_SECRET}` } }
+  );
+  if (listResp.ok) {
+    const listData = await listResp.json();
+    const users = listData.users || listData || [];
+    authUser = users.find((u) => u.email && u.email.toLowerCase() === correo.toLowerCase());
+  }
+
+  if (!authUser) {
+    /* Crear la cuenta en auth.users */
+    const createResp = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_SECRET,
+        Authorization: `Bearer ${SUPABASE_SECRET}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: correo,
+        password: internalPwd,
+        email_confirm: true,
+        user_metadata: meta || undefined,
+      }),
+    });
+    if (!createResp.ok) {
+      const errText = await createResp.text();
+      throw new Error(`create user: ${createResp.status} ${errText}`);
+    }
+    authUser = await createResp.json();
+  }
+
+  if (!authUser?.id) throw new Error("No se pudo encontrar o crear el usuario en auth");
+
+  /* 2. Asignar la contraseña temporal y metadata al usuario */
+  const putBody = { password: internalPwd, email_confirm: true };
+  if (meta) putBody.user_metadata = Object.assign({}, authUser.user_metadata || {}, meta);
+  const putResp = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${authUser.id}`, {
+    method: "PUT",
     headers: {
       apikey: SUPABASE_SECRET,
       Authorization: `Bearer ${SUPABASE_SECRET}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ type: "magiclink", email: correo }),
+    body: JSON.stringify(putBody),
   });
-  if (!gl.ok) throw new Error(`generate_link: ${gl.status} ${await gl.text()}`);
-  const { hashed_token } = await gl.json();
+  if (!putResp.ok) {
+    const errText = await putResp.text();
+    throw new Error(`set password: ${putResp.status} ${errText}`);
+  }
 
-  const destino = redirectTo || SUPABASE_URL;
-  const vf = await fetch(
-    `${SUPABASE_URL}/auth/v1/verify?token=${hashed_token}&type=magiclink&redirect_to=${encodeURIComponent(destino)}`,
-    { headers: { apikey: SUPABASE_SECRET, Authorization: `Bearer ${SUPABASE_SECRET}` }, redirect: "manual" }
-  );
-  const loc = vf.headers.get("location");
-  if (!loc) throw new Error(`verify ${vf.status}: ${await vf.text()}`);
+  /* 3. Hacer sign-in con la contraseña temporal para obtener tokens */
+  const signInResp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_SECRET,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email: correo, password: internalPwd }),
+  });
+  if (!signInResp.ok) {
+    const errText = await signInResp.text();
+    throw new Error(`sign-in: ${signInResp.status} ${errText}`);
+  }
 
-  const p = new URLSearchParams(new URL(loc).hash.replace(/^#/, ""));
-  const access_token = p.get("access_token");
-  const refresh_token = p.get("refresh_token");
-  if (!access_token || !refresh_token) throw new Error("verify: tokens ausentes");
-  return { access_token, refresh_token, expires_at: Number(p.get("expires_at") || 0) };
+  const sesion = await signInResp.json();
+  if (!sesion.access_token || !sesion.refresh_token) {
+    throw new Error("sign-in: tokens ausentes en la respuesta");
+  }
+
+  return {
+    access_token: sesion.access_token,
+    refresh_token: sesion.refresh_token,
+    expires_at: sesion.expires_at || 0,
+  };
 }
 
 const ERROR_GENERICO = "Usuario o contraseña incorrectos";
 
-/* Verifica el PIN contra public.credenciales (solo service_role llega ahí). */
+/* Verifica el PIN contra public.usuarios.clave (solo service_role llega ahí).
+   El login acepta tanto el nombre de usuario como su correo registrado. */
 async function verificarPin(usuario, pin) {
-  const correo = correoDeCuenta(usuario);
-  if (!correo || !pin) return null;
-  const perfil = (await rest(`perfiles?email=eq.${encodeURIComponent(correo)}&select=id,email,usuario_id&limit=1`))[0];
-  if (!perfil) return null;
-  /* Baja lógica (HU2/HU3): un usuario en estado Inactivo no puede iniciar sesión. */
-  if (perfil.usuario_id) {
-    const filaUsuario = (await rest(`usuarios?id=eq.${perfil.usuario_id}&select=estado&limit=1`))[0];
-    if (filaUsuario && String(filaUsuario.estado).toLowerCase() !== "activo") return null;
+  const claveUsr = String(usuario || "").trim().toLowerCase();
+  if (!claveUsr || !pin) return null;
+  const sinDominio = claveUsr.replace(/@libreriasanmartin\.app$/i, "");
+
+  let fila = (await rest(
+    `usuarios?usuario=eq.${encodeURIComponent(sinDominio)}&select=id,usuario,clave,rol,estado,email,nombre&limit=1`
+  ))[0];
+
+  if (!fila && claveUsr.includes("@")) {
+    fila = (await rest(
+      `usuarios?email=eq.${encodeURIComponent(claveUsr)}&select=id,usuario,clave,rol,estado,email,nombre&limit=1`
+    ))[0];
   }
-  const fila = (await rest(`credenciales?id=eq.${perfil.id}&select=clave_hash&limit=1`))[0];
-  if (!fila || !verifyPin(pin, fila.clave_hash)) return null;
-  return perfil;
+
+  if (!fila) return null;
+  /* Baja lógica (HU2/HU3): un usuario en estado inactivo no puede iniciar sesión. */
+  if (fila.estado === false || fila.estado === 0) return null;
+  if (!verifyPin(pin, fila.clave)) return null;
+
+  const correo = fila.email || correoDeCuenta(fila.usuario);
+  return { id: fila.id, email: correo, usuario: fila.usuario, usuario_id: fila.id, rol: fila.rol, nombre: fila.nombre };
+}
+
+/* ---------- operaciones privilegiadas (solo Administrador) ---------- */
+/* Devuelve { id, usuario_id, rol } si el token pertenece a un Administrador. */
+async function autenticarAdmin(token) {
+  if (!token) return null;
+  const who = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: SUPABASE_SECRET, Authorization: `Bearer ${token}` },
+  });
+  if (!who.ok) return null;
+  const user = await who.json();
+  if (!user?.id || !user?.email) return null;
+
+  const emailActual = String(user.email).toLowerCase();
+  const usr = emailActual.split("@")[0];
+  const metaUsuario = user.user_metadata?.usuario;
+  const metaUsuarioId = user.user_metadata?.usuario_id;
+
+  let u = null;
+
+  // 1. Por ID directo en metadata
+  if (metaUsuarioId) {
+    const filas = await rest(`usuarios?id=eq.${encodeURIComponent(metaUsuarioId)}&select=id,usuario,rol,estado,email&limit=1`);
+    if (filas && filas[0]) u = filas[0];
+  }
+
+  // 2. Por email de auth o por usuario
+  if (!u) {
+    const conds = [`email.eq.${encodeURIComponent(emailActual)}`];
+    if (usr) conds.push(`usuario.eq.${encodeURIComponent(usr)}`);
+    if (metaUsuario) conds.push(`usuario.eq.${encodeURIComponent(metaUsuario)}`);
+    const filas = await rest(`usuarios?or=(${conds.join(",")})&select=id,usuario,rol,estado,email&limit=1`);
+    if (filas && filas[0]) u = filas[0];
+  }
+
+  // 3. Fallback al rol en user_metadata si está definido
+  if (!u && String(user.user_metadata?.rol).toLowerCase() === "administrador") {
+    return { id: user.id, usuario_id: null, rol: "Administrador" };
+  }
+
+  if (!u || !u.estado) return null;
+  const esAdmin = String(u.rol || "").trim().toLowerCase() === "administrador"
+    || String(user.user_metadata?.rol || "").trim().toLowerCase() === "administrador";
+
+  return esAdmin
+    ? { id: user.id, usuario_id: u.id || null, rol: u.rol }
+    : null;
 }
 
 /* ---------- limitador de intentos (memoria de la instancia) ---------- */
@@ -121,11 +239,17 @@ function excedido(ip) {
 }
 
 function cuerpo(req) {
+  if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
+  if (req.body && typeof req.body === "string") {
+    try { return Promise.resolve(JSON.parse(req.body)); } catch { return Promise.resolve({}); }
+  }
   return new Promise((resolve) => {
     let crudo = "";
+    const MAX_BODY = 2 * 1024 * 1024; // 2 MB para fotos base64
+    if (typeof req.on !== "function") return resolve({});
     req.on("data", (c) => {
       crudo += c;
-      if (crudo.length > 4096) req.destroy();
+      if (crudo.length > MAX_BODY) req.destroy();
     });
     req.on("end", () => {
       try { resolve(JSON.parse(crudo || "{}")); } catch { resolve({}); }
@@ -141,6 +265,6 @@ function origenDe(req) {
 
 module.exports = {
   hashPin, verifyPin, correoDeCuenta, rest, emitirSesion,
-  verificarPin, ipDe, excedido, cuerpo, origenDe, ERROR_GENERICO,
+  verificarPin, autenticarAdmin, ipDe, excedido, cuerpo, origenDe, ERROR_GENERICO,
   SUPABASE_URL, SUPABASE_SECRET,
 };

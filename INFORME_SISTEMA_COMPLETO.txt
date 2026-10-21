@@ -1,0 +1,247 @@
+================================================================================
+INFORME COMPLETO DEL SISTEMA - LIBRERÍA SAN MARTÍN
+Fecha de generación: 2026-10-10
+Última actualización: 2026-10-10
+Base de datos: Supabase PostgreSQL (Proyecto: tkypdjfmifywnwwjmcfh)
+Hosting: Vercel (https://libreria-san-martin.vercel.app)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. MÓDULOS DEL SISTEMA
+--------------------------------------------------------------------------------
+El sistema consta de 8 módulos principales accesibles desde la plataforma web
+(Desktop) y la aplicación móvil PWA:
+
+  1. Dashboard (Inicio)  🏠  Resumen general con KPIs de ventas, stock crítico,
+                              gráficos estadísticos y accesos rápidos a módulos.
+  2. Ventas              🛒  Punto de venta (POS), gestión de tickets, flujo
+                              de caja y emisión de comprobantes.
+  3. Inventario          📦  Catálogo de productos, control de stock,
+                              categorías y administración de precios.
+  4. Compras             📥  Gestión de proveedores, registro de adquisiciones
+                              y control de pedidos.
+  5. Usuarios y Roles    👤  Gestión de usuarios, asignación de roles,
+                              presencia en tiempo real (🟢/⚪) y seguridad
+                              con clave maestra.
+  6. Reportes            📊  Indicadores clave, comparativas financieras y
+                              gráficos de rendimiento del negocio.
+  7. Perfil              👤  Autogestión del perfil del usuario logueado
+                              (foto, nombre, correo).
+  8. Auditoría           📋  Historial consolidado de cambios y operaciones
+                              realizadas en el sistema.
+
+Navegación Móvil PWA (movil.html):
+  - Barra inferior con 4 botones: Inicio · Venta · Productos · Perfil
+  - Soporte para botón físico "Atrás" del dispositivo (popstate)
+  - Service Worker activo para uso offline parcial
+  - Instalable como aplicación en el dispositivo
+
+--------------------------------------------------------------------------------
+2. ENLACES DE ACCESO AL SISTEMA
+--------------------------------------------------------------------------------
+
+  💻 Versión Web Desktop:
+     https://libreria-san-martin.vercel.app
+
+  📱 Versión Móvil / App PWA:
+     https://libreria-san-martin.vercel.app/movil.html
+
+--------------------------------------------------------------------------------
+3. USUARIOS Y ACCESOS (Supabase Auth + API /api/usuarios)
+--------------------------------------------------------------------------------
+Cuentas registradas en el sistema (3 usuarios activos):
+
+┌───────────────────────────────────────┬─────────────────────────────┬───────────┬───────────────┬──────────────────────────────────┬─────────┐
+│ ID (UUID)                             │ Nombre completo             │ Usuario   │ Rol           │ Correo electrónico               │ Estado  │
+├───────────────────────────────────────┼─────────────────────────────┼───────────┼───────────────┼──────────────────────────────────┼─────────┤
+│ b4e3c8e6-cb6a-4e78-868f-dabb2d524ec9 │ Jeremy Gutierrez Sanchez    │ @jeremy   │ Administrador │ gutierresyeremy0@gmail.com        │ Activo  │
+│ dd145aff-98f8-4295-892e-2eee9daa37ed │ Gustavo Guachalla Rocha     │ @gustavo  │ Vendedor      │ gustavoguachalla331@gmail.com     │ Activo  │
+│ 042cb2dc-fcdd-4ead-b7e3-9184cff7e6ea │ Ricardo Bartolomeo          │ @ricardo  │ Empleado      │ ricardobartolomeo25@gmail.com     │ Activo  │
+└───────────────────────────────────────┴─────────────────────────────┴───────────┴───────────────┴──────────────────────────────────┴─────────┘
+
+CREDENCIALES DE ACCESO:
+  • Jeremy   → Usuario: jeremy   | Contraseña: aventurino 12  | Rol: Administrador
+  • Gustavo  → Usuario: gustavo  | Contraseña: (definida por el admin)  | Rol: Vendedor
+  • Ricardo  → Usuario: ricardo  | Contraseña: (definida por el admin)  | Rol: Empleado
+
+PRESENCIA EN TIEMPO REAL:
+  🟢  EN LÍNEA      → El usuario tiene sesión activa y está conectado.
+  ⚪  Desconectado   → El usuario no tiene sesión activa.
+  • Canal de presencia: "presencia-usuarios" (Supabase Realtime Channels)
+  • Actualización automática cada vez que un usuario entra o sale.
+
+POLÍTICAS Y PERMISOS DE ADMINISTRACIÓN:
+  • Administrador Principal (Jeremy): Posee el nivel máximo de permisos.
+    Es el único poseedor de la Clave Maestra de Seguridad.
+  • Los administradores pueden editar TODOS los datos de cualquier usuario:
+    nombre, correo, contraseña, foto de perfil y rol.
+  • Las ediciones son ilimitadas: un admin puede editar el mismo perfil
+    las veces que necesite sin restricciones.
+  • Creación de usuarios ilimitada mediante la API /api/usuarios-nuevo
+    (usa service_role de Supabase para crear en auth.users y public.usuarios).
+  • Contraseñas: Se permiten de 1 a 100 caracteres, incluyendo espacios,
+    mayúsculas, minúsculas, números y caracteres especiales.
+
+PROTECCIÓN DE REVOCACIÓN DE ROL ADMIN:
+  • Para cambiar el rol de un Administrador a Empleado o Vendedor,
+    se requiere la CONTRASEÑA MAESTRA.
+  • Se despliega un modal interactivo con animación de alerta (🚨 / ⚠️)
+    solicitando la clave.
+  • Contraseña Maestra: galletas.oreo
+  • Esta clave es conocida únicamente por el Administrador original (Jeremy).
+
+--------------------------------------------------------------------------------
+4. CATÁLOGO E INVENTARIO EN VIVO
+--------------------------------------------------------------------------------
+
+CATEGORÍAS ACTIVAS (4):
+
+  ┌────┬────────────────────────────────────────┬──────────────────────────────────────────────────────┐
+  │ #  │ Nombre                                 │ ID (UUID)                                            │
+  ├────┼────────────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │  1 │ Escolar y Papelería                    │ 7bf51ff0-55e0-421e-a8a2-a7c482abb3c2                 │
+  │  2 │ Textos Universitarios                  │ b44899f0-c714-4803-9caa-bc04a07de3fd                 │
+  │  3 │ Oficina y Escritorio                   │ 189df7a3-b5a0-4e43-91a8-2963aa899fa2                 │
+  │  4 │ Arte y Manualidades                    │ 8700776a-f512-496d-a316-6cfb7cdf80df                 │
+  └────┴────────────────────────────────────────┴──────────────────────────────────────────────────────┘
+
+PRODUCTOS EN CATÁLOGO (8 artículos, datos verificados en tiempo real):
+
+  ┌─────────┬────────────────────────────────┬───────────────────────┬──────────────┬──────────────┬────────┐
+  │ Código  │ Nombre del Producto            │ Categoría             │ Precio Venta │ Stock Actual │ Estado │
+  ├─────────┼────────────────────────────────┼───────────────────────┼──────────────┼──────────────┼────────┤
+  │ CUA-100 │ Cuaderno Ledesma 100 Hojas     │ Escolar y Papelería   │ Bs 6.50      │ 3 unidades   │ Activo │
+  │ BOL-AZ  │ Bolígrafo Faber-Castell Azul   │ Escolar y Papelería   │ Bs 5.00      │ 8 unidades   │ Activo │
+  │ BOL-NG  │ Bolígrafo Faber-Castell Negro  │ Escolar y Papelería   │ Bs 5.00      │ 0 unidades   │ Activo │
+  │ HCT-002 │ Hoja Carpeta Trazo             │ Escolar y Papelería   │ Bs 2.50      │ 4 unidades   │ Activo │
+  │ CAL-201 │ Calculadora Científica Casio   │ Textos Universitarios │ Bs 120.00    │ 15 unidades  │ Activo │
+  │ RPA-503 │ Resma de Papel A4 Carta 75g    │ Oficina y Escritorio  │ Bs 28.00     │ 40 unidades  │ Activo │
+  │ MRK-120 │ Marcadores Sharpie x12         │ Oficina y Escritorio  │ Bs 39.00     │ 5 unidades   │ Activo │
+  │ CRT-014 │ Cartulinas de Colores          │ Arte y Manualidades   │ Bs 3.00      │ 1 unidad     │ Activo │
+  └─────────┴────────────────────────────────┴───────────────────────┴──────────────┴──────────────┴────────┘
+
+RESUMEN DE INVENTARIO:
+  • Total productos en catálogo: 8
+  • Stock total acumulado: 76 unidades
+  • Valor total de inventario (a precio venta): Bs 656.00
+  • Alertas de stock crítico (< 5 unidades):
+    ⚠️ Bolígrafo Faber-Castell Negro (0 unid.) — SIN STOCK
+    ⚠️ Cartulinas de Colores (1 unid.)
+    ⚠️ Cuaderno Ledesma 100 Hojas (3 unid.)
+    ⚠️ Hoja Carpeta Trazo (4 unid.)
+
+--------------------------------------------------------------------------------
+5. PROVEEDORES REGISTRADOS
+--------------------------------------------------------------------------------
+Proveedores activos en la base de datos (3):
+
+  ┌────┬──────────────────────────────────────┬──────────────────────────┬──────────────┐
+  │ #  │ Nombre                               │ Contacto                 │ Teléfono     │
+  ├────┼──────────────────────────────────────┼──────────────────────────┼──────────────┤
+  │  1 │ Distribuidora Papelera Bolivia        │ Juan Carlos Rojas        │ 2 231 4545   │
+  │  2 │ Librería e Importaciones El Ateneo    │ María Elena Castro       │ 2 244 7890   │
+  │  3 │ Comercializadora Faber-Castell        │ Luis Alberto Paredes     │ 3 322 5566   │
+  └────┴──────────────────────────────────────┴──────────────────────────┴──────────────┘
+
+--------------------------------------------------------------------------------
+6. ESTADO DE TABLAS EN LA BASE DE DATOS (Supabase)
+--------------------------------------------------------------------------------
+
+  ┌──────────────────────────┬─────────────┬────────────────────────────────────────┐
+  │ Tabla                    │ Registros   │ Observaciones                          │
+  ├──────────────────────────┼─────────────┼────────────────────────────────────────┤
+  │ usuarios                 │ 3           │ Protegida por RLS (acceso vía API)     │
+  │ productos                │ 8           │ Datos verificados en tiempo real       │
+  │ categorias               │ 4           │ 4 categorías activas                   │
+  │ proveedores              │ 3           │ 3 proveedores registrados              │
+  │ ventas                   │ 0           │ Sin registros de venta aún             │
+  │ compras                  │ 0           │ Sin registros de compra aún            │
+  └──────────────────────────┴─────────────┴────────────────────────────────────────┘
+
+  Nota: Las tablas clientes, sucursales, movimientos_inventario, apertura_caja,
+  gastos, devoluciones y caja_flujo no existen actualmente en el schema público.
+
+--------------------------------------------------------------------------------
+7. ARQUITECTURA TÉCNICA
+--------------------------------------------------------------------------------
+
+FRONTEND / PWA:
+  • HTML5, Vanilla JavaScript (ES Modules), CSS Vanilla
+  • Service Worker PWA (sw.js) con versionamiento de caché (lsm-v42)
+  • Archivos principales:
+    - index.html          → Página principal (Desktop)
+    - movil.html          → Página optimizada para móvil
+    - manifest.webmanifest→ Configuración PWA
+    - sw.js               → Service Worker con caché versionado
+  • Assets:
+    - app.js              → Router SPA, navegación, popstate, UI principal
+    - data.js             → Repositorio de datos, Supabase client, broadcast
+    - ui.js               → Componentes de interfaz reutilizables
+    - supabase-client.js  → Cliente Supabase configurado
+    - confetti.min.js     → Animaciones de confetti
+  • Vistas (web/assets/views/):
+    - dashboard.js        → Panel de inicio con KPIs y gráficos
+    - ventas.js           → Módulo punto de venta
+    - inventario.js       → Gestión de productos y stock
+    - compras.js          → Gestión de compras y proveedores
+    - usuarios.js         → Gestión de usuarios, roles y presencia
+    - reportes.js         → Módulo de reportes y estadísticas
+    - perfil.js           → Autogestión del perfil del usuario
+
+BACKEND / APIs (Serverless Vercel Node.js):
+  Directorio: web/api/
+
+  • _lib.js               → Funciones auxiliares compartidas:
+                             - Hashing scrypt de contraseñas/PINs
+                             - Emisión de tokens Supabase Auth
+                             - Rate limiting y validaciones
+  • login.js              → POST: Autenticación de usuarios con
+                             verificación de credenciales hasheadas
+  • usuarios.js           → GET/PATCH: Consulta y modificación completa
+                             de perfiles (nombre, correo, foto, rol,
+                             contraseña). Validación de clave maestra
+                             para cambios de rol de administradores.
+  • usuarios-nuevo.js     → POST: Creación de usuarios ilimitados
+                             usando service_role de Supabase para
+                             insertar en auth.users y public.usuarios.
+  • perfil.js             → GET/PATCH: Autogestión del perfil del
+                             usuario logueado.
+  • clave.js              → POST: Verificación de la contraseña maestra
+                             (galletas.oreo) para operaciones protegidas.
+  • usuario-pin.js        → POST/PATCH: Gestión de PINs de acceso
+                             rápido para el punto de venta.
+
+BASE DE DATOS:
+  • Supabase PostgreSQL con RLS (Row Level Security) configurado
+  • Sincronización en tiempo real vía WebSockets / Supabase Realtime
+  • Canal de presencia: "presencia-usuarios"
+  • Canal de broadcast: sincronización de cambios de estado entre
+    todas las sesiones activas (PC y Móvil)
+  • Cache-busting implementado con timestamps en queries
+
+SEGURIDAD:
+  • Contraseñas hasheadas con scrypt (nunca almacenadas en texto plano)
+  • Tokens JWT de Supabase para autenticación
+  • RLS en tablas sensibles (usuarios)
+  • Clave maestra separada para operaciones críticas
+  • Validaciones server-side en todas las APIs
+
+--------------------------------------------------------------------------------
+8. HISTORIAL DE MODIFICACIONES RECIENTES
+--------------------------------------------------------------------------------
+
+  [2026-10-10] Implementación completa:
+    ✅ Sistema de presencia en línea (🟢/⚪) en tiempo real
+    ✅ Protección de cambio de rol admin con clave maestra
+    ✅ Edición ilimitada de perfiles de usuario por administradores
+    ✅ Contraseñas flexibles (1-100 caracteres, espacios permitidos)
+    ✅ Sincronización en tiempo real entre sesiones (broadcast)
+    ✅ Cache-busting para evitar datos desactualizados
+    ✅ Navegación PWA con botón "Atrás" funcional (popstate)
+    ✅ Barra de navegación inferior para móvil (Inicio/Venta/Productos/Perfil)
+    ✅ Creación de usuarios ilimitada sin restricciones de Auth
+    ✅ Fotos de perfil sincronizadas entre tabla pública y sesión
+
+================================================================================
+FIN DEL INFORME DEL SISTEMA
+================================================================================

@@ -164,12 +164,31 @@ export const barras = (datos, max, fmt) => `
     }).join("")}
   </div>`;
 
-export const input = (etiqueta, attrs = {}) => `
+export const input = (etiqueta, attrs = {}) => {
+  const esPassword = attrs.type === "password";
+  const attrsStr = Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(" ");
+  if (!esPassword) {
+    return `
+    <label class="block">
+      <span class="block text-xs font-semibold text-slate-500 mb-1">${etiqueta}</span>
+      <input ${attrsStr}
+        class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2a5298] focus:border-transparent" />
+    </label>`;
+  }
+  return `
   <label class="block">
     <span class="block text-xs font-semibold text-slate-500 mb-1">${etiqueta}</span>
-    <input ${Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(" ")}
-      class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2a5298] focus:border-transparent" />
+    <div class="relative flex items-center">
+      <input ${attrsStr}
+        class="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#2a5298] focus:border-transparent" />
+      <button type="button" data-toggle-pass
+        class="absolute right-2.5 text-slate-400 hover:text-slate-700 p-1 text-base leading-none transition select-none cursor-pointer"
+        title="Ver / Ocultar contraseña" aria-label="Ver u ocultar contraseña">
+        👁️
+      </button>
+    </div>
   </label>`;
+};
 
 export const select = (etiqueta, opciones, attrs = {}) => `
   <label class="block">

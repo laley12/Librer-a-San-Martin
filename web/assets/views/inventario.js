@@ -1,5 +1,5 @@
-import { money, moneyCorto, num, fecha, fechaHora } from "../supabase-client.js";
-import { state, repo, kpis, movimientosRecientes, mapaProductos } from "../data.js";
+import { money, moneyCorto, num } from "../supabase-client.js";
+import { state, repo, kpis, costoUnitario, mapaProductos } from "../data.js";
 import { esc, toast, modal, tabla, seccion, input, select, badgeStock, exportarCSV, confirmar } from "../ui.js";
 
 export const meta = { id: "inventario", titulo: "Productos & Inventario", icono: "📦", grupo: "Operación" };
@@ -34,7 +34,7 @@ export function render() {
     </div>
 
     <div class="flex gap-2 overflow-x-auto pb-1">
-      ${[["listado", "📋 Listado"], ["stock", "⚠️ Stock bajo"], ["movimientos", "🔄 Movimientos"], ["valor", "💰 Valorización"], ["categorias", "🏷️ Categorías"]]
+      ${[["listado", "📋 Listado"], ["stock", "⚠️ Stock bajo"], ["valor", "💰 Valorización"], ["categorias", "🏷️ Categorías"]]
         .map(([k, t]) => `<button data-tab="${k}" class="tab shrink-0 px-3.5 py-2 rounded-lg text-xs font-semibold ${tab === k ? "bg-[#1e3c72] text-white" : "bg-white text-slate-600 border border-slate-200"}">${t}</button>`).join("")}
       <span class="grow"></span>
       ${ctx_ayuda()}
@@ -59,14 +59,13 @@ function productosFiltrados() {
     if (filtro.vista === "agotado") lista = lista.filter((p) => Number(p.stock) <= 0);
   }
   if (filtro.cat) lista = lista.filter((p) => String(p.categoria_id) === filtro.cat);
-  if (q) lista = lista.filter((p) => p.nombre_producto.toLowerCase().includes(q) || String(p.codigo || "").toLowerCase().includes(q));
-  return lista.sort((a, b) => a.nombre_producto.localeCompare(b.nombre_producto));
+  if (q) lista = lista.filter((p) => p.nombre.toLowerCase().includes(q) || String(p.codigo || "").toLowerCase().includes(q));
+  return lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
 function panel() {
   if (tab === "stock") return panelStockBajo();
   const lista = productosFiltrados();
-  if (tab === "movimientos") return panelMovimientos();
   if (tab === "valor") return panelValor();
   if (tab === "categorias") return panelCategorias();
   return panelListado(lista);
@@ -85,11 +84,11 @@ function panelStockBajo() {
     </div>`}
     ${seccion(`Stock bajo y agotados (${bajo.length})`, tabla([
       { t: "Código", v: (p) => `<span class="font-mono text-[10px] text-slate-500">${esc(p.codigo || "—")}</span>` },
-      { t: "Producto", v: (p) => `<span class="font-medium">${esc(p.nombre_producto)}</span>` },
-      { t: "Categoría", v: (p) => `<span class="text-xs text-slate-500">${esc(state.categorias.find((c) => c.id_categoria === p.categoria_id)?.nombre_categoria || "—")}</span>` },
-      { t: "Precio", der: 1, v: (p) => `<span class="font-semibold">${money(p.precio)}</span>` },
+      { t: "Producto", v: (p) => `<span class="font-medium">${esc(p.nombre)}</span>` },
+      { t: "Categoría", v: (p) => `<span class="text-xs text-slate-500">${esc(state.categorias.find((c) => c.id === p.categoria_id)?.nombre || "—")}</span>` },
+      { t: "Precio", der: 1, v: (p) => `<span class="font-semibold">${money(p.precio_venta)}</span>` },
       { t: "Stock", der: 1, v: (p) => `<span class="font-bold ${Number(p.stock) <= 0 ? "text-red-600" : "text-amber-600"}">${p.stock}</span> ${badgeStock(p.stock)}` },
-      { t: "", der: 1, v: (p) => `<button data-ajuste="${p.id_producto}" class="text-[10px] px-2 py-1 rounded bg-blue-50 text-[#2a5298] font-semibold">Ajustar</button>` },
+      { t: "", der: 1, v: (p) => `<button data-ajuste="${p.id}" class="text-[10px] px-2 py-1 rounded bg-blue-50 text-[#2a5298] font-semibold">Ajustar</button>` },
     ], bajo, { vacio: "Ningún producto con stock bajo" }))}
   </div>`;
 }
@@ -107,30 +106,19 @@ function panelListado(lista) {
       </select>
       <select id="filtroCat" class="px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white">
         <option value="">Todas las categorías</option>
-        ${state.categorias.map((c) => `<option value="${c.id_categoria}" ${String(filtro.cat) === String(c.id_categoria) ? "selected" : ""}>${esc(c.nombre_categoria)}</option>`).join("")}
+        ${state.categorias.map((c) => `<option value="${c.id}" ${String(filtro.cat) === String(c.id) ? "selected" : ""}>${esc(c.nombre)}</option>`).join("")}
       </select>
     </div>
     ${tabla([
       { t: "Código", v: (p) => `<span class="font-mono text-[10px] text-slate-500">${esc(p.codigo || "—")}</span>` },
-      { t: "Producto", v: (p) => `<span class="font-medium">${esc(p.nombre_producto)}</span>` },
-      { t: "Categoría", v: (p) => `<span class="text-xs text-slate-500">${esc(state.categorias.find((c) => c.id_categoria === p.categoria_id)?.nombre_categoria || "—")}</span>` },
-      { t: "Costo", der: 1, v: (p) => `<span class="text-xs text-slate-500">${money(p.precio_compra)}</span>` },
-      { t: "Precio", der: 1, v: (p) => `<span class="font-semibold">${money(p.precio)}</span>` },
+      { t: "Producto", v: (p) => `<span class="font-medium">${esc(p.nombre)}</span>` },
+      { t: "Categoría", v: (p) => `<span class="text-xs text-slate-500">${esc(state.categorias.find((c) => c.id === p.categoria_id)?.nombre || "—")}</span>` },
+      { t: "Costo", der: 1, v: (p) => `<span class="text-xs text-slate-500">${money(costoUnitario(p.id))}</span>` },
+      { t: "Precio", der: 1, v: (p) => `<span class="font-semibold">${money(p.precio_venta)}</span>` },
       { t: "Stock", der: 1, v: (p) => `<span class="font-bold">${p.stock}</span> ${badgeStock(p.stock)}` },
-      { t: "", der: 1, v: (p) => `${Number(p.activo) !== 1 ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-semibold">Inactivo</span> ` : ""}<button data-ajuste="${p.id_producto}" class="text-[10px] px-2 py-1 rounded bg-blue-50 text-[#2a5298] font-semibold">Ajustar</button> ${Number(p.activo) === 1 ? `<button data-baja="${p.id_producto}" class="text-[10px] px-2 py-1 rounded bg-red-50 text-red-600 font-semibold">Dar de baja</button>` : `<button data-alta="${p.id_producto}" class="text-[10px] px-2 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold">Reactivar</button>`}` },
+      { t: "", der: 1, v: (p) => `${Number(p.activo) !== 1 ? `<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-semibold">Inactivo</span> ` : ""}<button data-ajuste="${p.id}" class="text-[10px] px-2 py-1 rounded bg-blue-50 text-[#2a5298] font-semibold">Ajustar</button> ${Number(p.activo) === 1 ? `<button data-baja="${p.id}" class="text-[10px] px-2 py-1 rounded bg-red-50 text-red-600 font-semibold">Dar de baja</button>` : `<button data-alta="${p.id}" class="text-[10px] px-2 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold">Reactivar</button>`}` },
     ], lista, { vacio: "Sin productos que coincidan" })}`,
     `<button data-export="productos" class="text-xs font-semibold text-[#2a5298] border border-[#2a5298] px-3 py-1.5 rounded-lg">Exportar CSV</button>`);
-}
-
-function panelMovimientos() {
-  return seccion("Historial de movimientos", tabla([
-    { t: "Fecha", v: (m) => `<span class="text-xs">${fechaHora(m.fecha_hora)}</span>` },
-    { t: "Producto", v: (m) => esc(mapaProductos().get(m.id_producto)?.nombre_producto || `#${m.id_producto}`) },
-    { t: "Tipo", v: (m) => `<span class="text-[10px] px-2 py-0.5 rounded-full ${m.tipo === "SALIDA" ? "bg-amber-100 text-amber-700" : m.tipo === "AJUSTE" ? "bg-sky-100 text-sky-700" : "bg-emerald-100 text-emerald-700"}">${m.tipo}</span>` },
-    { t: "Cantidad", der: 1, v: (m) => `<span class="font-bold ${m.cantidad >= 0 ? "text-emerald-600" : "text-red-600"}">${m.cantidad > 0 ? "+" : ""}${m.cantidad}</span>` },
-    { t: "Motivo", v: (m) => `<span class="text-xs text-slate-500">${esc(m.motivo || "—")}</span>` },
-    { t: "Usuario", v: (m) => `<span class="text-xs text-slate-400">${esc(state.usuarios.find((u) => u.id === m.id_usuario)?.nombre || "Sistema")}</span>` },
-  ], movimientosRecientes(60), { vacio: "Sin movimientos registrados" }));
 }
 
 function panelValor() {
@@ -139,13 +127,13 @@ function panelValor() {
     const k = p.categoria_id || 0;
     const a = porCat.get(k) || { unidades: 0, valor: 0, productos: 0 };
     a.unidades += Number(p.stock || 0);
-    a.valor += Number(p.stock || 0) * Number(p.precio_compra || p.precio || 0);
+    a.valor += Number(p.stock || 0) * (costoUnitario(p.id) || Number(p.precio_venta || 0));
     a.productos += 1;
     porCat.set(k, a);
   }
   const filas = [...porCat.entries()].map(([k, v]) => ({
     id: k,
-    nombre: state.categorias.find((c) => c.id_categoria === k)?.nombre_categoria || "Sin categoría",
+    nombre: state.categorias.find((c) => c.id === k)?.nombre || "Sin categoría",
     ...v,
   })).sort((a, b) => b.valor - a.valor);
   return seccion("Valorización por categoría (a costo)", tabla([
@@ -161,16 +149,15 @@ function panelCategorias() {
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <div class="lg:col-span-2">
       ${seccion("Categorías", tabla([
-        { t: "Categoría", v: (c) => esc(c.nombre_categoria) },
-        { t: "Código", v: (c) => `<span class="font-mono text-[10px] text-slate-500">${esc(c.codigo_categoria || "—")}</span>` },
-        { t: "Productos", der: 1, v: (c) => state.productos.filter((p) => p.categoria_id === c.id_categoria).length },
-        { t: "Tienda", der: 1, v: (c) => `<span class="text-[10px] px-2 py-0.5 rounded-full ${Number(c.visible_tienda) === 1 ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}">${Number(c.visible_tienda) === 1 ? "Visible" : "Interna"}</span>` },
+        { t: "Categoría", v: (c) => esc(c.nombre) },
+        { t: "Descripción", v: (c) => `<span class="text-xs text-slate-500">${esc(c.descripcion || "—")}</span>` },
+        { t: "Productos", der: 1, v: (c) => state.productos.filter((p) => p.categoria_id === c.id).length },
       ], state.categorias, { vacio: "Sin categorías" }))}
     </div>
     ${seccion("Nueva categoría", `
       <div class="space-y-3">
-        ${input("Nombre", { id: "catNombre", placeholder: "Ej: Cuadernos" })}
-        ${input("Código", { id: "catCodigo", placeholder: "Opcional" })}
+        ${input("Nombre", { id: "catNombre", placeholder: "Ej: Escolar y Papelería" })}
+        ${input("Descripción", { id: "catDesc", placeholder: "Opcional" })}
         ${btnGuardar()}
       </div>`)}
   </div>`;
@@ -185,23 +172,18 @@ function modalAjuste(p) {
   const m = modal({
     titulo: "Ajustar stock", ancho: "max-w-sm",
     cuerpo: `
-      <p class="text-sm mb-3"><b>${esc(p.nombre_producto)}</b><br /><span class="text-xs text-slate-500">Stock actual: ${p.stock}</span></p>
-      ${input("Cantidad (+ entrada / − salida)", { id: "ajusteCant", type: "number", value: "0" })}
-      <div class="mt-3">${input("Motivo", { id: "ajusteMotivo", placeholder: "Merma, corrección, devolución…" })}</div>
-      <p class="text-[10px] text-slate-400 mt-2">El ajuste se registra en el historial de movimientos y actualiza el stock al instante.</p>`,
+      <p class="text-sm mb-3"><b>${esc(p.nombre)}</b><br /><span class="text-xs text-slate-500">Stock actual: ${p.stock}</span></p>
+      ${input("Nuevo stock (valor exacto)", { id: "ajusteCant", type: "number", step: "1", value: p.stock })}`,
     acciones: [
       { texto: "Cancelar", clase: "bg-slate-200 text-slate-700", fn: () => false },
       {
-        texto: "Aplicar ajuste", clase: "bg-[#1e3c72] text-white",
+        texto: "Guardar stock", clase: "bg-[#1e3c72] text-white",
         fn: async (wrap) => {
-          const cantidad = Number(wrap.querySelector("#ajusteCant").value || 0);
-          if (!cantidad) return false;
-          await repo.ajustarStock({
-            productoId: p.id_producto, cantidad,
-            motivo: wrap.querySelector("#ajusteMotivo").value || "Ajuste manual",
-            idUsuario: ctxId(),
-          });
-          toast(`Stock ajustado: ${cantidad > 0 ? "+" : ""}${cantidad}`);
+          const stock = Number(wrap.querySelector("#ajusteCant").value);
+          if (Number.isNaN(stock) || stock < 0) { toast("Stock no válido", "warn"); return false; }
+          if (stock === Number(p.stock)) return true;
+          await repo.ajustarStock({ productoId: p.id, stock });
+          toast("Stock actualizado");
           await _ctx?.recargar();
           _ctx?.rerender();
           return true;
@@ -213,22 +195,20 @@ function modalAjuste(p) {
 }
 
 function modalProducto() {
-  const cats = state.categorias.map((c) => ({ v: c.id_categoria, t: c.nombre_categoria }));
+  const cats = state.categorias.map((c) => ({ v: c.id, t: c.nombre }));
   modal({
     titulo: "Nuevo producto", ancho: "max-w-md",
     cuerpo: `
       <div class="space-y-3">
         ${input("Nombre", { id: "pNombre", placeholder: "Nombre del producto" })}
         <div class="grid grid-cols-2 gap-3">
-          ${input("Código", { id: "pCodigo", placeholder: "PROD-0021" })}
-          ${input("Código de barras", { id: "pBarras", placeholder: "Opcional" })}
+          ${input("Código", { id: "pCodigo", placeholder: "PROD-0001" })}
+          ${input("Precio de venta", { id: "pPrecio", type: "number", step: "0.01", value: "0" })}
         </div>
-        <div class="grid grid-cols-3 gap-3">
-          ${input("Precio", { id: "pPrecio", type: "number", step: "0.01" })}
-          ${input("Costo", { id: "pCosto", type: "number", step: "0.01" })}
-          ${input("Stock", { id: "pStock", type: "number" })}
+        <div class="grid grid-cols-2 gap-3">
+          ${input("Stock inicial", { id: "pStock", type: "number", step: "1", value: "0" })}
+          ${select("Categoría", [{ v: "", t: "Sin categoría" }, ...cats], { id: "pCategoria" })}
         </div>
-        ${select("Categoría", [{ v: "", t: "Sin categoría" }, ...cats], { id: "pCategoria" })}
       </div>`,
     acciones: [
       { texto: "Cancelar", clase: "bg-slate-200 text-slate-700", fn: () => false },
@@ -236,17 +216,14 @@ function modalProducto() {
         texto: "Guardar", clase: "bg-emerald-600 text-white",
         fn: async (w) => {
           const nombre = w.querySelector("#pNombre").value.trim();
-          if (!nombre) return false;
+          if (!nombre) { toast("Escribe el nombre", "warn"); return false; }
           await repo.crearProducto({
-            nombre_producto: nombre,
+            nombre,
             codigo: w.querySelector("#pCodigo").value.trim() || null,
-            codigo_barras: w.querySelector("#pBarras").value.trim() || null,
-            precio: Number(w.querySelector("#pPrecio").value || 0),
-            precio_compra: Number(w.querySelector("#pCosto").value || 0),
+            precio_venta: Number(w.querySelector("#pPrecio").value || 0),
             stock: Number(w.querySelector("#pStock").value || 0),
-            categoria_id: Number(w.querySelector("#pCategoria").value) || null,
-            activo: 1,
-          }, ctxId());
+            categoria_id: w.querySelector("#pCategoria").value || null,
+          });
           toast("Producto creado");
           await _ctx?.recargar();
           _ctx?.rerender();
@@ -259,7 +236,6 @@ function modalProducto() {
 
 let _ctx = null;
 export function setCtx(c) { _ctx = c; }
-function ctxId() { return _ctx?.perfil?.usuarioId ?? null; }
 
 export function mount(root, ctx) {
   _ctx = ctx;
@@ -271,18 +247,18 @@ export function mount(root, ctx) {
 
     const aj = e.target.closest("[data-ajuste]");
     if (aj) {
-      const p = mapaProductos().get(+aj.dataset.ajuste);
+      const p = mapaProductos().get(aj.dataset.ajuste);
       if (p) modalAjuste(p);
       return;
     }
 
     const baja = e.target.closest("[data-baja]");
     if (baja) {
-      const p = mapaProductos().get(+baja.dataset.baja);
+      const p = mapaProductos().get(baja.dataset.baja);
       if (!p) return;
-      if (!(await confirmar(`Dar de baja "${p.nombre_producto}"? Dejará de aparecer en el POS y en las listas operativas, pero su historial se conserva.`, "Dar de baja"))) return;
+      if (!(await confirmar(`Dar de baja "${esc(p.nombre)}"? Dejará de aparecer en el POS y en las listas operativas, pero su historial se conserva.`, "Dar de baja"))) return;
       try {
-        await repo.actualizarProducto(p.id_producto, { activo: 0 }, ctxId());
+        await repo.actualizarProducto(p.id, { activo: false });
         toast("Producto dado de baja");
         await ctx.recargar(); ctx.rerender();
       } catch (err) { toast(err.message, "error"); }
@@ -291,11 +267,11 @@ export function mount(root, ctx) {
 
     const alta = e.target.closest("[data-alta]");
     if (alta) {
-      const p = mapaProductos().get(+alta.dataset.alta);
+      const p = mapaProductos().get(alta.dataset.alta);
       if (!p) return;
-      if (!(await confirmar(`Reactivar "${p.nombre_producto}"? Volverá a aparecer en el POS y en las listas operativas.`, "Reactivar"))) return;
+      if (!(await confirmar(`Reactivar "${esc(p.nombre)}"? Volverá a aparecer en el POS y en las listas operativas.`, "Reactivar"))) return;
       try {
-        await repo.actualizarProducto(p.id_producto, { activo: 1 }, ctxId());
+        await repo.actualizarProducto(p.id, { activo: true });
         toast("Producto reactivado");
         await ctx.recargar(); ctx.rerender();
       } catch (err) { toast(err.message, "error"); }
@@ -306,7 +282,7 @@ export function mount(root, ctx) {
       const nombre = root.querySelector("#catNombre")?.value.trim();
       if (!nombre) return toast("Escribe el nombre", "warn");
       try {
-        await repo.crearCategoria({ nombre_categoria: nombre, codigo_categoria: root.querySelector("#catCodigo").value.trim() || null, activo: 1, visible_tienda: 1 }, ctxId());
+        await repo.crearCategoria({ nombre, descripcion: root.querySelector("#catDesc")?.value.trim() || null });
         toast("Categoría creada");
         await ctx.recargar(); ctx.rerender();
       } catch (err) { toast(err.message, "error"); }
@@ -318,11 +294,11 @@ export function mount(root, ctx) {
       const lista = productosFiltrados();
       exportarCSV("productos", [
         { titulo: "Código", valor: (p) => p.codigo },
-        { titulo: "Producto", valor: (p) => p.nombre_producto },
-        { titulo: "Categoría", valor: (p) => state.categorias.find((c) => c.id_categoria === p.categoria_id)?.nombre_categoria || "" },
-        { titulo: "Costo", valor: (p) => p.precio_compra },
-        { titulo: "Precio", valor: (p) => p.precio },
+        { titulo: "Producto", valor: (p) => p.nombre },
+        { titulo: "Categoría", valor: (p) => state.categorias.find((c) => c.id === p.categoria_id)?.nombre || "" },
+        { titulo: "Precio venta", valor: (p) => p.precio_venta },
         { titulo: "Stock", valor: (p) => p.stock },
+        { titulo: "Activo", valor: (p) => Number(p.activo) === 1 ? "Sí" : "No" },
       ], lista);
     }
   });

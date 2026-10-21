@@ -58,7 +58,7 @@
 
   <main id="vista" class="grow w-full overflow-y-auto p-3"></main>
 
-  <nav id="navInferior" class="bg-white border-t border-slate-200 flex shrink-0 safe-b"></nav>
+  <nav id="bottomNav" class="bg-white border-t border-slate-200 fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 grid grid-cols-4 z-50 shadow-[0_-1px_2px_rgba(15,23,42,0.05)] safe-bottom"></nav>
 </div>
 
 <!-- Drawer -->
@@ -88,7 +88,7 @@
   window.addEventListener('unhandledrejection', (event) => {
     console.error('[LSM UNHANDLED PROMISE]', event.reason);
   });
-  import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js";
+  import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js?v=4.2";
   console.log('[LSM] movil.html module script started');
   cablearGlobal();
   console.log('[LSM] cablearGlobal done, calling iniciar');

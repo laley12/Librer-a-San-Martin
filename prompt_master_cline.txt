@@ -1,0 +1,49 @@
+# ========================================================
+#  PROMPT MASTER - INSTRUCCIONES PARA CLINE EN VS CODE
+# ========================================================
+# Ubicación: Copia este archivo en VS Code -> Cline Chat
+# y pega el contenido exacto del bloque "Prompt para Cline"
+# a continuación para ejecutar la Tarea 6 completa.
+
+# ========================================================
+# 1. CONFIGURACIÓN DE CREDENCIALES Y VARIABLES DE ENTORNO
+# ========================================================
+# (Ver archivo .env en la raíz del proyecto)
+# El .env ya contiene: DATABASE_URL, SUPABASE_URL, SUPABASE_ANON_KEY,
+# VITE_API_URL, VERCEL_DEPLOY_URL, SLACK_WEBHOOK_URL,
+# COMENTERA_PROJECT_ID, DEVIN_SESSION_ID, GITHUB_REPO
+
+# ========================================================
+# 2. PROMPT PARA CLINE
+# ========================================================
+
+Hola Cline, vamos a implementar la Tarea 6 (Nuevas Tecnologías) para el proyecto de la Librería 'San Martín'. Necesito que configures y estructures las 5 tecnologías solicitadas por la docenta:
+
+Devin AI: Genera el código boilerplate y la documentación del prompt/log de asistencia autónoma en la carpeta docs/devin_log.md.
+
+Slack Webhook Integration: Agrega una función auxiliar en Python (backend/slack_notifier.py) que envíe un mensaje a Slack (SLACK_WEBHOOK_URL) cada vez que un producto nuevo sea registrado.
+
+Vercel Deployment: Asegúrate de que la configuración de vercel.json esté lista para el frontend en Vite/React.
+
+Comentera Visual Feedback: Inserta el script de Comentera en el index.html del frontend para permitir notas de revisión en la UI.
+
+Gráfico 3D Interactivo: Crea un componente React (frontend/src/components/Product3DViewer.jsx) utilizando @react-three/fiber o Three.js para mostrar una caja de libro/producto tridimensional interactiva que rote con el mouse.
+
+Estructura requerida:
+
+Base de Datos: Supabase (Tabla products).
+
+Backend: FastAPI (main.py, database.py, models.py, schemas.py) conectado a Supabase mediante SQLAlchemy.
+
+Frontend: SPA con React, Tailwind CSS y el visor 3D.
+
+Por favor, procede creando los archivos necesarios y ejecutando las dependencias.
+
+# ========================================================
+# 3. NOTAS ADICIONALES PARA CLINE
+# ========================================================
+# - El proyecto actual es PHP + vanilla JS en web/
+# - Para la Tarea 6 se extenderá con React/Vite en frontend/
+# - El backend FastAPI se añadirá en backend/
+# - Los archivos .env ya contienen las credenciales
+# - No olvides ejecutar: npm install en frontend/ y pip install -r requirements.txt en backend/

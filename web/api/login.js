@@ -36,7 +36,12 @@ module.exports = async function login(req, res) {
   try {
     const perfil = await verificarPin(usuario, password);
     if (!perfil) return res.status(401).json({ error: ERROR_GENERICO });
-    const sesion = await emitirSesion(perfil.email, origenDe(req));
+    const sesion = await emitirSesion(perfil.email, origenDe(req), {
+      usuario_id: perfil.id,
+      usuario: perfil.usuario,
+      rol: perfil.rol,
+      nombre: perfil.nombre,
+    });
     return res.status(200).json(sesion);
   } catch (e) {
     console.error("login:", e.message);

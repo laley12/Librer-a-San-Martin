@@ -1,36 +1,17 @@
-﻿import { money, moneyCorto, num, fecha } from "../supabase-client.js";
+import { money, moneyCorto, num, fecha } from "../supabase-client.js";
 import { state, kpisRango, serieRango, rangoFechas, enPeriodo, topProductos, topProveedores, nombreProducto, ventasVigentes } from "../data.js";
 import { kpiCard, seccion, tabla, esc, badgeStock } from "../ui.js";
 
 export const meta = { id: "dashboard", titulo: "Dashboard General", icono: "📊", grupo: "Principal" };
 
-/* ---------------- atajos del panel de inicio ----------------
-   Botones grandes, con lenguaje de todos los días, pensados para que
-   no haya que "navegar": se toca y se llega. El orden es el orden del
-   trabajo real: vender, cobrar, revisar, comprar. ---------------- */
-const ATAJOS = [
-  { icono: "🛒", t: "Hacer una venta", sub: "Punto de venta", vista: "ventas", tab: "pos",
-    caja: "bg-emerald-100 text-emerald-700", borde: "hover:border-emerald-300" },
-  { icono: "📋", t: "Ver mis ventas", sub: "Historial del día", vista: "ventas", tab: "historial",
-    caja: "bg-sky-100 text-sky-700", borde: "hover:border-sky-300" },
-  { icono: "📦", t: "Los productos", sub: "Precios y stock", vista: "inventario", tab: "listado",
-    caja: "bg-violet-100 text-violet-700", borde: "hover:border-violet-300" },
-  { icono: "⚠️", t: "Poco stock", sub: "Revisar faltantes", vista: "inventario", tab: "stock",
-    caja: "bg-rose-100 text-rose-700", borde: "hover:border-rose-300" },
-  { icono: "🚚", t: "Las compras", sub: "A proveedores", vista: "compras", tab: "compras",
-    caja: "bg-orange-100 text-orange-700", borde: "hover:border-orange-300" },
-  { icono: "👤", t: "Los usuarios", sub: "Altas y permisos", vista: "usuarios", soloAdmin: true,
-    caja: "bg-slate-100 text-slate-700", borde: "hover:border-slate-300" },
-];
-
+/* ---------------- cabecera y bienvenida ---------------- */
 function saludo() {
   const h = new Date().getHours();
-  return h < 13 ? "Buenos días" : h < 20 ? "Buenas tardes" : "Buenas noches";
+  if (h < 12) return "¡Buenos días";
+  if (h < 19) return "¡Buenas tardes";
+  return "¡Buenas noches";
 }
 
-/* El nombre vive en la cabecera del shell (index.html / movil.html).
-   Si el registro migrado guarda el rol en vez del nombre ("Administrador"),
-   mejor no poner nada antes de la coma. */
 function nombreCorto() {
   const n = (document.getElementById("nombreUsuario")?.textContent || "").trim();
   if (!n || n === "-" || n.includes("@")) return "";
@@ -41,45 +22,248 @@ function nombreCorto() {
 
 function esAdministrador() {
   const r = (document.getElementById("rolUsuario")?.textContent || "").trim();
-  return r === "Administrador";
+  return r.toLowerCase().includes("admin");
 }
 
-function atajo(a) {
-  const params = a.tab ? ` data-params='{"tab":"${a.tab}"}'` : "";
-  return `
-  <button data-ir="${a.vista}"${params}
-    class="atajo group bg-white rounded-2xl border-2 border-slate-100 ${a.borde} p-3 md:p-4 text-left shadow-sm flex flex-col justify-between gap-2 min-h-[104px] md:min-h-[116px] hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition">
-    <span class="w-11 h-11 md:w-12 md:h-12 rounded-xl ${a.caja} flex items-center justify-center text-2xl md:text-[26px] leading-none shrink-0">${a.icono}</span>
-    <span class="block">
-      <span class="block text-[15px] md:text-base font-bold text-slate-800 leading-tight">${a.t}</span>
-      <span class="block text-[11px] md:text-xs text-slate-500 mt-0.5">${a.sub}</span>
-    </span>
-  </button>`;
+function esVendedor() {
+  const r = (document.getElementById("rolUsuario")?.textContent || "").trim();
+  return r.toLowerCase().includes("vendedor");
 }
 
-function bloqueAtajos() {
-  const lista = ATAJOS.filter((a) => !a.soloAdmin);
-  if (esAdministrador()) lista.push(ATAJOS.find((a) => a.soloAdmin));
+function bannerBienvenida() {
   const nombre = nombreCorto();
+  const saludoTxt = saludo();
   return `
-  <section class="rounded-2xl bg-gradient-to-br from-[#1e3c72] to-[#2a5298] p-4 md:p-5 shadow-md">
-    <div class="flex items-start justify-between gap-3 mb-3 md:mb-4">
+  <section class="rounded-2xl md:rounded-3xl bg-gradient-to-r from-[#1e3c72] via-[#2a5298] to-[#1e3c72] p-5 md:p-6 shadow-md text-white relative overflow-hidden">
+    <div class="relative z-10 flex items-center justify-between gap-4">
       <div class="min-w-0">
-        <p class="text-lg md:text-xl font-bold text-white leading-tight">
-          ${saludo()}${nombre ? ", " + esc(nombre) : ""} 👋
-        </p>
-        <p class="text-xs md:text-sm text-blue-100 mt-0.5">
-          Toca cualquiera de estos botones para empezar.
+        <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight">
+          ${saludoTxt}${nombre ? `, ${esc(nombre)}` : ""}! 👋
+        </h1>
+        <p class="text-xs sm:text-sm text-blue-100 font-medium mt-1">
+          Todo listo para tu jornada.
         </p>
       </div>
-      <span class="text-3xl md:text-4xl shrink-0">📚</span>
-    </div>
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-3">
-      ${lista.map(atajo).join("")}
+      <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/20 flex items-center justify-center text-2xl md:text-3xl shrink-0 shadow-inner">
+        📚
+      </div>
     </div>
   </section>`;
 }
 
+/* ---------------- resumen de hoy (3 tarjetas compactas) ---------------- */
+function resumenHoy() {
+  const kHoy = kpisRango({ opcion: "hoy" });
+  const totalHoy = kHoy.ventas;
+  const countHoy = kHoy.count;
+
+  // Consultas reales y honestas de la base de datos (Supabase state)
+  const pendientesVentas = state.ventas.filter((v) => v.estado && String(v.estado).toLowerCase().includes("pendiente")).length;
+  const pendientesCompras = state.compras.filter((c) => c.estado && String(c.estado).toLowerCase().includes("pendiente")).length;
+  const pendientesTotal = pendientesVentas + pendientesCompras;
+
+  const prodsStockBajo = state.productos.filter((p) => Number(p.activo) === 1 && Number(p.stock) <= 5);
+  const stockBajoCount = prodsStockBajo.length;
+
+  return `
+  <section>
+    <div class="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+      <!-- Tarjeta 1: Ventas -->
+      <button data-ir="ventas" data-params='{"tab":"historial"}'
+        class="bg-white rounded-2xl border border-emerald-200/80 hover:border-emerald-500 hover:shadow-md p-2.5 sm:p-3.5 md:p-4 text-center transition-all active:scale-[0.98] shadow-xs flex flex-col items-center justify-center gap-1 group cursor-pointer">
+        <span class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base sm:text-lg shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+          💵
+        </span>
+        <span class="block text-xs sm:text-base md:text-lg font-black text-slate-900 group-hover:text-emerald-700 transition-colors leading-tight">
+          ${money(totalHoy)}
+        </span>
+        <span class="block text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider leading-none">
+          Ventas
+        </span>
+        <span class="block text-[9px] sm:text-[11px] text-slate-400 font-medium leading-none">
+          ${countHoy} ${countHoy === 1 ? "venta" : "ventas"}
+        </span>
+      </button>
+
+      <!-- Tarjeta 2: Pendientes -->
+      <button data-ir="compras"
+        class="bg-white rounded-2xl border border-sky-200/80 hover:border-sky-500 hover:shadow-md p-2.5 sm:p-3.5 md:p-4 text-center transition-all active:scale-[0.98] shadow-xs flex flex-col items-center justify-center gap-1 group cursor-pointer">
+        <span class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-base sm:text-lg shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+          📋
+        </span>
+        <span class="block text-xs sm:text-base md:text-lg font-black text-slate-900 group-hover:text-sky-700 transition-colors leading-tight">
+          ${num(pendientesTotal)}
+        </span>
+        <span class="block text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider leading-none">
+          Pendientes
+        </span>
+        <span class="block text-[9px] sm:text-[11px] text-slate-400 font-medium leading-none">
+          ${pendientesTotal === 0 ? "0 pendientes" : `${pendientesTotal} pend.`}
+        </span>
+      </button>
+
+      <!-- Tarjeta 3: Stock Bajo -->
+      <button data-ir="inventario" data-params='{"tab":"stock"}'
+        class="bg-white rounded-2xl border border-amber-200/80 hover:border-amber-500 hover:shadow-md p-2.5 sm:p-3.5 md:p-4 text-center transition-all active:scale-[0.98] shadow-xs flex flex-col items-center justify-center gap-1 group cursor-pointer">
+        <span class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-base sm:text-lg shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+          ⚠️
+        </span>
+        <span class="block text-xs sm:text-base md:text-lg font-black ${stockBajoCount > 0 ? "text-amber-600" : "text-slate-900"} leading-tight transition-colors">
+          ${num(stockBajoCount)}
+        </span>
+        <span class="block text-[11px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider leading-none">
+          Stock Bajo
+        </span>
+        <span class="block text-[9px] sm:text-[11px] text-slate-400 font-medium leading-none">
+          ${stockBajoCount === 1 ? "1 faltante" : `${stockBajoCount} faltantes`}
+        </span>
+      </button>
+    </div>
+  </section>`;
+}
+
+/* ---------------- accesos rápidos (2 columnas en móvil) ---------------- */
+const ACCESOS_RAPIDOS = [
+  {
+    icono: "🛒",
+    titulo: "Nueva Venta",
+    sub: "Punto de venta",
+    vista: "ventas",
+    tab: "pos",
+    bgCard: "bg-gradient-to-b from-emerald-50 via-emerald-50/80 to-emerald-100/60",
+    borde: "border-2 border-emerald-200/90 hover:border-emerald-500 hover:shadow-emerald-500/20",
+    iconBg: "bg-emerald-600 text-white shadow-md shadow-emerald-600/30",
+    textTitle: "text-emerald-950",
+    textSub: "text-emerald-700 font-medium",
+    roles: ["admin", "empleado", "vendedor"],
+  },
+  {
+    icono: "📋",
+    titulo: "Historial",
+    sub: "Ver registros",
+    vista: "ventas",
+    tab: "historial",
+    bgCard: "bg-gradient-to-b from-sky-50 via-sky-50/80 to-sky-100/60",
+    borde: "border-2 border-sky-200/90 hover:border-sky-500 hover:shadow-sky-500/20",
+    iconBg: "bg-sky-600 text-white shadow-md shadow-sky-600/30",
+    textTitle: "text-sky-950",
+    textSub: "text-sky-700 font-medium",
+    roles: ["admin", "empleado", "vendedor"],
+  },
+  {
+    icono: "📦",
+    titulo: "Productos",
+    sub: "Precios y stock",
+    vista: "inventario",
+    tab: "listado",
+    bgCard: "bg-gradient-to-b from-violet-50 via-violet-50/80 to-violet-100/60",
+    borde: "border-2 border-violet-200/90 hover:border-violet-500 hover:shadow-violet-500/20",
+    iconBg: "bg-violet-600 text-white shadow-md shadow-violet-600/30",
+    textTitle: "text-violet-950",
+    textSub: "text-violet-700 font-medium",
+    roles: ["admin", "empleado", "vendedor"],
+  },
+  {
+    icono: "⚠️",
+    titulo: "Poco Stock",
+    sub: "Revisar faltantes",
+    vista: "inventario",
+    tab: "stock",
+    bgCard: "bg-gradient-to-b from-amber-50 via-amber-50/80 to-amber-100/60",
+    borde: "border-2 border-amber-200/90 hover:border-amber-500 hover:shadow-amber-500/20",
+    iconBg: "bg-amber-500 text-white shadow-md shadow-amber-500/30",
+    textTitle: "text-amber-950",
+    textSub: "text-amber-800 font-medium",
+    roles: ["admin", "empleado"],
+  },
+  {
+    icono: "🚚",
+    titulo: "Compras",
+    sub: "A proveedores",
+    vista: "compras",
+    tab: "compras",
+    bgCard: "bg-gradient-to-b from-orange-50 via-orange-50/80 to-orange-100/60",
+    borde: "border-2 border-orange-200/90 hover:border-orange-500 hover:shadow-orange-500/20",
+    iconBg: "bg-orange-500 text-white shadow-md shadow-orange-500/30",
+    textTitle: "text-orange-950",
+    textSub: "text-orange-800 font-medium",
+    roles: ["admin", "empleado"],
+  },
+  {
+    icono: "👤",
+    titulo: "Usuarios",
+    sub: "Altas y roles",
+    vista: "usuarios",
+    soloAdmin: true,
+    bgCard: "bg-gradient-to-b from-blue-50 via-blue-50/80 to-indigo-100/60",
+    borde: "border-2 border-blue-200/90 hover:border-[#1e3c72] hover:shadow-blue-900/20",
+    iconBg: "bg-[#1e3c72] text-white shadow-md shadow-blue-950/30",
+    textTitle: "text-slate-900",
+    textSub: "text-blue-900/80 font-medium",
+    roles: ["admin"],
+  },
+];
+
+function bloqueAccesosRapidos() {
+  const admin = esAdministrador();
+  const vendedor = esVendedor();
+  const rolActual = admin ? "admin" : vendedor ? "vendedor" : "empleado";
+  const lista = ACCESOS_RAPIDOS.filter((a) => {
+    if (a.soloAdmin && !admin) return false;
+    if (a.roles && !a.roles.includes(rolActual)) return false;
+    return true;
+  });
+  return `
+  <section class="space-y-2.5">
+    <div class="flex items-center justify-between px-0.5">
+      <h2 class="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">Accesos Rápidos</h2>
+      <span class="text-[11px] text-slate-400 font-medium">Toca para ingresar</span>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+      ${lista.map((a) => {
+        const params = a.tab ? ` data-params='{"tab":"${a.tab}"}'` : "";
+        return `
+        <button data-ir="${a.vista}"${params}
+          class="group ${a.bgCard} ${a.borde} rounded-2xl hover:shadow-lg p-3 sm:p-3.5 md:p-4 text-center transition-all active:scale-[0.98] flex flex-col items-center justify-center gap-2 shadow-xs cursor-pointer">
+          <span class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shrink-0 ${a.iconBg} group-hover:scale-105 transition-transform">
+            ${a.icono}
+          </span>
+          <div class="w-full text-center">
+            <span class="block text-sm sm:text-base font-bold ${a.textTitle} leading-snug transition-colors">
+              ${a.titulo}
+            </span>
+            <span class="block text-[11px] sm:text-xs ${a.textSub} mt-0.5">
+              ${a.sub}
+            </span>
+          </div>
+        </button>`;
+      }).join("")}
+    </div>
+  </section>`;
+}
+
+/* ---------------- alerta flotante de stock ---------------- */
+function alertaStock(count) {
+  if (count <= 0) return "";
+  return `
+  <div class="rounded-2xl bg-amber-50 border-2 border-amber-300 p-3.5 md:p-4 flex items-center justify-between gap-3 shadow-xs text-amber-950">
+    <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+      <span class="text-xl sm:text-2xl shrink-0">⚠️</span>
+      <div class="min-w-0">
+        <span class="text-xs sm:text-sm md:text-base font-bold block truncate">
+          Hay ${count} ${count === 1 ? "producto" : "productos"} con stock bajo
+        </span>
+        <span class="text-[11px] sm:text-xs text-amber-800/80 hidden sm:inline">
+          Revisa los faltantes para evitar quedarte sin existencias
+        </span>
+      </div>
+    </div>
+    <button data-ir="inventario" data-params='{"tab":"stock"}'
+      class="shrink-0 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-xs transition-all flex items-center gap-1 cursor-pointer">
+      Revisar <span class="font-bold">&gt;</span>
+    </button>
+  </div>`;
+}
 
 /* ---------------- selector de rango de fechas (HU9) ---------------- */
 const RANGOS = [
@@ -118,6 +302,7 @@ export function render() {
   const prov = topProveedores(4, idsCompras);
   const bajo = state.productos.filter((p) => Number(p.activo) === 1 && Number(p.stock) <= 5)
     .sort((a, b) => a.stock - b.stock).slice(0, 5);
+  const bajoTotal = state.productos.filter((p) => Number(p.activo) === 1 && Number(p.stock) <= 5).length;
   const etiqueta = etiquetaRango();
 
   const chartData = s.map((x) => ({
@@ -134,15 +319,27 @@ export function render() {
 
   return `
   <div class="space-y-4 md:space-y-6 fade">
-    ${bloqueAtajos()}
+    <!-- 1. Header y Bienvenida -->
+    ${bannerBienvenida()}
 
-    ${selectorRango()}
+    <!-- 2. Resumen de hoy (3 tarjetas compactas con datos reales) -->
+    ${resumenHoy()}
 
-    <div class="mb-3 px-1 flex items-center justify-between">
-      <div>
-        <h2 class="text-base font-bold text-slate-700 uppercase tracking-wide">Resumen y Estado del Negocio</h2>
-        <p class="text-xs text-slate-500">Métricas en tiempo real de ventas e inventario</p>
+    <!-- 3. Accesos Rápidos (2 columnas en móvil) -->
+    ${bloqueAccesosRapidos()}
+
+    <!-- 4. Alerta Flotante de Stock Bajo -->
+    ${alertaStock(bajoTotal)}
+
+    <!-- 5. Métricas Analíticas y Selector de Rango -->
+    <div class="pt-2 border-t border-slate-200/80">
+      <div class="mb-3 px-1 flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-700 uppercase tracking-wide">Resumen y Estado del Negocio</h2>
+          <p class="text-xs text-slate-500">Métricas analíticas en tiempo real</p>
+        </div>
       </div>
+      ${selectorRango()}
     </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">

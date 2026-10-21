@@ -1,5 +1,5 @@
 import { esc, toast } from "../ui.js";
-import { cambiarClave, perfilActual, signOut } from "../supabase-client.js";
+import { sb, cambiarClave, perfilActual, signOut } from "../supabase-client.js";
 import { estadoRealtime, repo, state } from "../data.js";
 
 export const meta = { id: "perfil", titulo: "Mi Perfil", icono: "👤", grupo: "Cuenta" };
@@ -73,9 +73,9 @@ export function render() {
           </div>
           <div class="mt-1 text-[11px] text-blue-200 font-mono">@${esc(p.usuario || "")}</div>
         </div>
-        <button data-accion="editar"
+        <button data-accion="editar" onclick="window.__abrirModalEditarPerfil?.()"
           class="shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-xs font-semibold backdrop-blur-sm border border-white/20 shadow-sm active:scale-[0.98] transition">
-          ✏️ Editar
+          ✏️ Editar información
         </button>
       </div>
     </section>
@@ -83,7 +83,7 @@ export function render() {
     <section class="bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-sm">
       <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2.5">
         <h2 class="text-xs uppercase tracking-wider text-slate-500 font-bold">Datos de la cuenta</h2>
-        <button data-accion="editar" class="text-xs text-[#2a5298] font-semibold hover:underline">Modificar</button>
+        <button data-accion="editar" onclick="window.__abrirModalEditarPerfil?.()" class="text-xs text-[#2a5298] font-semibold hover:underline">Editar información</button>
       </div>
       <div class="space-y-3 text-sm">
         <div class="flex justify-between items-center gap-3">
@@ -104,9 +104,9 @@ export function render() {
         </div>
       </div>
       <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-2">
-        <button data-accion="editar"
+        <button data-accion="editar" onclick="window.__abrirModalEditarPerfil?.()"
           class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#1e3c72] hover:bg-[#2a5298] text-white text-xs font-semibold shadow-sm transition active:scale-[0.98]">
-          ✏️ Editar perfil y foto
+          ✏️ Editar información y foto
         </button>
         <button data-accion="pin"
           class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition active:scale-[0.98]">
@@ -166,8 +166,8 @@ function modalEditarDatos() {
     <form id="formEditarPerfil" class="bg-white w-full max-w-md md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh] fade">
       <div class="px-6 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between shrink-0">
         <div>
-          <h2 class="text-lg font-bold text-[#1e3c72]">Editar Perfil</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Actualiza tus datos de usuario, foto y credenciales</p>
+          <h2 class="text-lg font-bold text-[#1e3c72]">Editar Información</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Actualiza tu nombre completo, usuario, correo, foto y contraseña</p>
         </div>
         <button type="button" id="btnCerrarModalEdit" class="text-slate-400 hover:text-slate-600 text-xl p-1">×</button>
       </div>
@@ -209,9 +209,16 @@ function modalEditarDatos() {
         <div class="pt-2 border-t border-slate-100">
           <label class="block">
             <span class="block text-xs font-semibold text-slate-600 mb-1">Nueva contraseña / PIN (opcional)</span>
-            <input id="dClave" type="password" autocomplete="new-password" placeholder="Dejar en blanco para mantener la actual"
-              class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#2a5298] transition" />
-            <span class="block text-[11px] text-slate-400 mt-1">Si deseas cambiar tu PIN de acceso, escribe uno nuevo de 4 a 12 caracteres.</span>
+            <div class="relative flex items-center">
+              <input id="dClave" type="password" autocomplete="new-password" placeholder="Dejar en blanco para mantener la actual"
+                class="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#2a5298] transition" />
+              <button type="button" data-toggle-pass
+                class="absolute right-2.5 text-slate-400 hover:text-slate-700 p-1 text-base leading-none transition select-none cursor-pointer"
+                title="Ver / Ocultar contraseña" aria-label="Ver u ocultar contraseña">
+                👁️
+              </button>
+            </div>
+            <span class="block text-[11px] text-slate-400 mt-1">Si deseas cambiar tu contraseña / PIN de acceso, escribe una nueva (mínimo 4 caracteres).</span>
           </label>
         </div>
       </div>
@@ -270,25 +277,37 @@ function modalEditarDatos() {
       if (!nombre) throw new Error("El nombre no puede estar vacío");
       if (!usuario) throw new Error("El usuario no puede estar vacío");
 
-      const usuarioId = p.usuarioId;
-      if (!usuarioId) throw new Error("ID de usuario no identificado");
+      // Obtener token de sesión para llamar al API
+      const { data: sesion } = await sb.auth.getSession();
+      const token = sesion?.session?.access_token;
+      if (!token) throw new Error("Sesión no válida. Inicia sesión de nuevo.");
 
-      // Actualizar datos de usuario y foto en Supabase
-      await repo.actualizarPerfilPropio({
-        usuarioId,
+      // Armar payload para /api/perfil
+      const payload = {
         nombre,
         usuario,
         email: email || `${usuario}@libreriasanmartin.app`,
         foto: nuevaFotoBase64,
-      });
-
+      };
       // Si especificó nueva contraseña / PIN
       if (claveNueva) {
-        if (claveNueva.length < 4 || claveNueva.length > 12) {
-          throw new Error("El nuevo PIN debe tener entre 4 y 12 caracteres");
+        if (claveNueva.length < 4 || claveNueva.length > 64) {
+          throw new Error("La nueva contraseña / PIN debe tener entre 4 y 64 caracteres");
         }
-        await cambiarClave(claveNueva);
+        payload.password = claveNueva;
       }
+
+      // Llamar al endpoint seguro del servidor
+      const resp = await fetch("/api/perfil", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(result.error || "Error al actualizar perfil");
 
       wrap.remove();
       await renovarPerfil();
@@ -316,18 +335,32 @@ function modalCambiarPin() {
       <form id="formPinPerfil" class="px-6 py-5 space-y-4">
         <label class="block">
           <span class="block text-xs font-semibold text-slate-600 mb-1">PIN nuevo</span>
-          <input id="clave1" type="password" required autocomplete="new-password" inputmode="numeric" placeholder="Ingresa tu nuevo PIN"
-            class="w-full px-3 py-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#2a5298]" />
+          <div class="relative flex items-center">
+            <input id="clave1" type="password" required autocomplete="new-password" inputmode="numeric" placeholder="Ingresa tu nuevo PIN"
+              class="w-full pl-3 pr-10 py-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#2a5298]" />
+            <button type="button" data-toggle-pass
+              class="absolute right-2.5 text-slate-400 hover:text-slate-700 p-1 text-base leading-none transition select-none cursor-pointer"
+              title="Ver / Ocultar contraseña" aria-label="Ver u ocultar contraseña">
+              👁️
+            </button>
+          </div>
         </label>
         <label class="block">
           <span class="block text-xs font-semibold text-slate-600 mb-1">Repite el PIN</span>
-          <input id="clave2" type="password" required autocomplete="new-password" inputmode="numeric" placeholder="Repite tu nuevo PIN"
-            class="w-full px-3 py-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#2a5298]" />
+          <div class="relative flex items-center">
+            <input id="clave2" type="password" required autocomplete="new-password" inputmode="numeric" placeholder="Repite tu nuevo PIN"
+              class="w-full pl-3 pr-10 py-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-[#2a5298]" />
+            <button type="button" data-toggle-pass
+              class="absolute right-2.5 text-slate-400 hover:text-slate-700 p-1 text-base leading-none transition select-none cursor-pointer"
+              title="Ver / Ocultar contraseña" aria-label="Ver u ocultar contraseña">
+              👁️
+            </button>
+          </div>
         </label>
         <p class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-          Entre 4 y 12 caracteres. Evita <code>12345</code> y PINs fáciles de adivinar.
+          Entre 4 y 64 caracteres. Evita contraseñas fáciles de adivinar como <code>12345</code>.
         </p>
-        <button class="w-full py-3 rounded-lg bg-[#1e3c72] hover:bg-[#2a5298] text-white font-semibold transition shadow-md">Guardar PIN</button>
+        <button class="w-full py-3 rounded-lg bg-[#1e3c72] hover:bg-[#2a5298] text-white font-semibold transition shadow-md">Guardar contraseña</button>
         <button type="button" id="cancelarPin" class="w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold transition">Cancelar</button>
       </form>
     </div>`;
@@ -338,8 +371,8 @@ function modalCambiarPin() {
     e.preventDefault();
     const a = wrap.querySelector("#clave1").value;
     const b = wrap.querySelector("#clave2").value;
-    if (a.length < 4 || a.length > 12) return toast("El PIN debe tener entre 4 y 12 caracteres", "warn");
-    if (a !== b) return toast("Los PIN no coinciden", "warn");
+    if (a.length < 4 || a.length > 64) return toast("La contraseña debe tener entre 4 y 64 caracteres", "warn");
+    if (a !== b) return toast("Las contraseñas no coinciden", "warn");
     if (/^(1234|12345|123456|0000|password|clave123|admin|abc123)$/i.test(a)) {
       return toast("Ese PIN es demasiado fácil. Elige otro.", "warn");
     }
@@ -361,6 +394,11 @@ async function cerrarSesion() {
 
 export function mount(root, ctx) {
   _ctx = ctx;
+  window.__abrirModalEditarPerfil = modalEditarDatos;
+
+  // Actualizar datos del perfil automáticamente al montar la vista
+  renovarPerfil();
+
   root.addEventListener("click", (e) => {
     const b = e.target.closest("[data-accion]");
     if (!b) return;
@@ -369,28 +407,41 @@ export function mount(root, ctx) {
     if (b.dataset.accion === "editar") modalEditarDatos();
   });
 
-  const inputFoto = root.querySelector("#inputFotoDirecta");
-  if (inputFoto) {
-    inputFoto.addEventListener("change", async (ev) => {
+  root.addEventListener("change", async (ev) => {
+    if (ev.target && ev.target.id === "inputFotoDirecta") {
       const file = ev.target.files?.[0];
       if (!file) return;
       try {
         toast("Procesando imagen...", "ok", 1500);
         const fotoBase64 = await procesarImagen(file, 400, 400, 0.82);
         const p = _ctx?.perfil;
-        if (p?.usuarioId) {
-          await repo.actualizarPerfilPropio({
-            usuarioId: p.usuarioId,
-            foto: fotoBase64,
+        if (p) {
+          const { data: sesion } = await sb.auth.getSession();
+          const token = sesion?.session?.access_token;
+          if (!token) throw new Error("Sesión no válida. Inicia sesión de nuevo.");
+          const resp = await fetch("/api/perfil", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              nombre: p.nombre || p.usuario,
+              usuario: p.usuario,
+              email: p.email,
+              foto: fotoBase64,
+            }),
           });
+          const result = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(result.error || "Error al actualizar foto");
           await renovarPerfil();
-          toast("✅ Perfil actualizado con éxito", "ok", 3500);
+          toast("✅ Foto de perfil actualizada con éxito", "ok", 3500);
         }
       } catch (err) {
         toast(err.message, "error");
       }
-    });
-  }
+    }
+  });
 }
 
 function $(id) {

@@ -110,26 +110,55 @@ export async function signOut() {
 export async function perfilActual() {
   console.log('[LSM] perfilActual called');
   const { data: auth, error: authError } = await sb.auth.getUser();
-  console.log('[LSM] perfilActual - getUser result:', auth?.user ? 'user exists' : 'no user', authError ? authError.message : 'no error');
-  if (authError) console.error('[LSM] perfilActual - auth error:', authError);
-  if (!auth?.user) return null;
-  const usuario = usuarioDeCorreo(auth.user.email).toLowerCase();
-  const { data, error } = await sb.from("usuarios")
-    .select("id,nombre,usuario,rol,estado,foto,email")
-    .eq("usuario", usuario).maybeSingle();
-  console.log('[LSM] perfilActual - usuarios query:', data ? 'found' : 'not found', error ? error.message : 'no error');
-  if (error) console.error('[LSM] perfilActual - usuarios error:', error);
-  const rol = data?.rol || "Empleado";
+  if (authError || !auth?.user) return null;
+
+  // 1. Intentar obtener el perfil directo desde el API seguro (sin bloqueo de RLS)
+  try {
+    const { data: sesion } = await sb.auth.getSession();
+    const token = sesion?.session?.access_token;
+    if (token) {
+      const resp = await fetch("/api/perfil", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (resp.ok) {
+        const p = await resp.json();
+        if (p?.usuario) {
+          return {
+            id: auth.user.id,
+            email: p.email || auth.user.email,
+            usuario: p.usuario,
+            correoCuenta: auth.user.email,
+            rol: p.rol || "Empleado",
+            nombre: p.nombre || p.usuario,
+            foto: p.foto || "",
+            usuarioId: p.usuarioId ?? null,
+            activo: p.activo !== false,
+            esAdmin: p.esAdmin || p.rol === "Administrador",
+            pinObligatorio: false,
+            debeCambiarClave: false,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[LSM] Error consultando /api/perfil:", err);
+  }
+
+  // 2. Fallback con metadata de Supabase Auth
+  const meta = auth.user.user_metadata || {};
+  const usuario = (meta.usuario || usuarioDeCorreo(auth.user.email)).toLowerCase();
+  const rol = meta.rol || "Administrador";
+
   return {
     id: auth.user.id,
-    email: data?.email || auth.user.email,
-    usuario: data?.usuario || usuario,
+    email: auth.user.email,
+    usuario,
     correoCuenta: auth.user.email,
     rol,
-    nombre: data?.nombre || usuario,
-    foto: data?.foto || "",
-    usuarioId: data?.id ?? null,
-    activo: Boolean(data) && (data.estado === true || Number(data.estado) === 1),
+    nombre: meta.nombre || usuario,
+    foto: "",
+    usuarioId: meta.usuario_id ?? null,
+    activo: true,
     esAdmin: rol === "Administrador",
     pinObligatorio: false,
     debeCambiarClave: false,

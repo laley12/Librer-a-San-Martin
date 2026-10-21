@@ -1,25 +1,14 @@
-const CACHE = "lsm-v9";
+const CACHE = "lsm-v42";
 const BASE = ["/", "/index.html", "/movil.html", "/manifest.webmanifest", "/icono.svg"];
-const ASSETS = [
-  "/assets/app.js", "/assets/ui.js", "/assets/data.js", "/assets/supabase-client.js",
-  "/assets/views/dashboard.js", "/assets/views/ventas.js", "/assets/views/inventario.js",
-  "/assets/views/compras.js", "/assets/views/clientes.js", "/assets/views/usuarios.js",
-  "/assets/views/reportes.js", "/assets/views/auditoria.js", "/assets/views/perfil.js",
-];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE)
-      .then((c) => c.addAll([...BASE, ...ASSETS]))
-      .then(() => self.skipWaiting())
-      .catch(() => self.skipWaiting())
-  );
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys()
-      .then((k) => Promise.all(k.filter((x) => x !== CACHE).map((x) => caches.delete(x))))
+      .then((k) => Promise.all(k.map((x) => caches.delete(x))))
       .then(() => self.clients.claim())
   );
 });
@@ -34,10 +23,10 @@ self.addEventListener("fetch", (e) => {
   // No cachear APIs
   if (url.pathname.startsWith("/rest/") || url.pathname.startsWith("/auth/") || url.pathname.startsWith("/api/")) return;
 
+  // Network First: buscar siempre la versión fresca del servidor
   e.respondWith(
     fetch(e.request)
       .then((res) => {
-        // Solo cachear respuestas exitosas
         if (res.ok) {
           const copia = res.clone();
           caches.open(CACHE).then((c) => c.put(e.request, copia)).catch(() => {});

@@ -37,8 +37,8 @@ module.exports = async function clave(req, res) {
 
   const { password } = await cuerpo(req);
   const pin = String(password || "");
-  if (pin.length < 4 || pin.length > 12) {
-    return res.status(400).json({ error: "El PIN debe tener entre 4 y 12 caracteres" });
+  if (pin.length < 1 || pin.length > 100) {
+    return res.status(400).json({ error: "La contraseña o PIN debe tener entre 1 y 100 caracteres" });
   }
 
   try {
@@ -47,20 +47,21 @@ module.exports = async function clave(req, res) {
     });
     if (!who.ok) return res.status(401).json({ error: "Sesión no válida" });
     const user = await who.json();
-    if (!user?.id) return res.status(401).json({ error: "Sesión no válida" });
+    if (!user?.id || !user?.email) return res.status(401).json({ error: "Sesión no válida" });
 
-    await fetch(`${SUPABASE_URL}/rest/v1/credenciales`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_SECRET,
-        Authorization: `Bearer ${SUPABASE_SECRET}`,
-        "Content-Type": "application/json",
-        Prefer: "resolution=merge-duplicates,return=minimal",
-      },
-      body: JSON.stringify({ id: user.id, clave_hash: hashPin(pin) }),
-    });
+    const emailActual = String(user.email).toLowerCase();
+    const usuarioActual = emailActual.split("@")[0];
+    const metaUsuarioId = user.user_metadata?.usuario_id;
+    const metaUsuario = user.user_metadata?.usuario;
 
-    await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${user.id}`, {
+    let patchUrl = `${SUPABASE_URL}/rest/v1/usuarios?or=(email.eq.${encodeURIComponent(emailActual)},usuario.eq.${encodeURIComponent(usuarioActual)})`;
+    if (metaUsuarioId) {
+      patchUrl = `${SUPABASE_URL}/rest/v1/usuarios?id=eq.${encodeURIComponent(metaUsuarioId)}`;
+    } else if (metaUsuario) {
+      patchUrl = `${SUPABASE_URL}/rest/v1/usuarios?or=(email.eq.${encodeURIComponent(emailActual)},usuario.eq.${encodeURIComponent(metaUsuario)},usuario.eq.${encodeURIComponent(usuarioActual)})`;
+    }
+
+    const r = await fetch(patchUrl, {
       method: "PATCH",
       headers: {
         apikey: SUPABASE_SECRET,
@@ -68,8 +69,9 @@ module.exports = async function clave(req, res) {
         "Content-Type": "application/json",
         Prefer: "return=minimal",
       },
-      body: JSON.stringify({ pin_obligatorio: false, debe_cambiar_clave: false }),
+      body: JSON.stringify({ clave: hashPin(pin) }),
     });
+    if (!r.ok) throw new Error(`usuarios: ${r.status} ${await r.text()}`);
 
     return res.status(200).json({ ok: true });
   } catch (e) {

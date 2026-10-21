@@ -1,5 +1,5 @@
 import { money, moneyCorto, num, fecha } from "../supabase-client.js";
-import { state, kpisRango, serieRango, rangoFechas, enPeriodo, topProductos, topProveedores, topClientes, ventasVigentes } from "../data.js";
+import { state, kpisRango, serieRango, rangoFechas, enPeriodo, topProductos, topProveedores, ventasVigentes, costoUnitario } from "../data.js";
 import { esc, tabla, seccion, barras, exportarCSV, kpiCard } from "../ui.js";
 
 export const meta = { id: "reportes", titulo: "Reportes Analíticos", icono: "📈", grupo: "Control" };
@@ -19,12 +19,12 @@ function etiquetaRango() {
 
 function idsVentasRango() {
   const rc = rangoFechas(rango);
-  return new Set(ventasVigentes().filter((v) => enPeriodo(v.fecha, rc)).map((v) => v.id_venta));
+  return new Set(ventasVigentes().filter((v) => enPeriodo(v.fecha, rc)).map((v) => v.id));
 }
 
 function idsComprasRango() {
   const rc = rangoFechas(rango);
-  return new Set(state.compras.filter((c) => enPeriodo(c.fecha, rc)).map((c) => c.id_compra));
+  return new Set(state.compras.filter((c) => enPeriodo(c.fecha, rc)).map((c) => c.id));
 }
 
 export function render() {
@@ -49,7 +49,7 @@ export function render() {
       ${kpiCard({ label: `Ventas ${etiqueta}`, valor: money(k.ventas), sub: `${k.count} ventas`, icono: "💰", color: "text-emerald-600", compacto: true })}
       ${kpiCard({ label: "Margen bruto", valor: money(k.margen), sub: `${k.ventas ? Math.round((k.margen / k.ventas) * 100) : 0}% sobre venta`, icono: "🧮", color: "text-sky-600", compacto: true })}
       ${kpiCard({ label: `Compras ${etiqueta}`, valor: money(k.compras), sub: `${k.comprasCount} compras`, icono: "🛒", color: "text-orange-600", compacto: true })}
-      ${kpiCard({ label: "Utilidad neta", valor: money(k.utilidad), sub: `gastos ${money(k.gastos)}`, icono: "🏦", color: k.utilidad >= 0 ? "text-violet-600" : "text-red-600", compacto: true })}
+      ${kpiCard({ label: "Utilidad neta", valor: money(k.utilidad), sub: `costo de ventas ${money(k.ventas - k.margen)}`, icono: "🏦", color: k.utilidad >= 0 ? "text-violet-600" : "text-red-600", compacto: true })}
     </div>
 
     ${seccion(`Ventas vs compras · ${etiqueta}`, barras(s.map((x) => ({
@@ -102,13 +102,24 @@ function panelProductos() {
 }
 
 function panelClientes() {
+  const rc = rangoFechas(rango);
+  const m = new Map();
+  for (const v of ventasVigentes()) {
+    if (!enPeriodo(v.fecha, rc)) continue;
+    const nombre = (v.cliente || "Consumidor final").trim() || "Consumidor final";
+    const a = m.get(nombre) || { nombre, compras: 0, total: 0 };
+    a.compras += 1;
+    a.total += Number(v.total || 0);
+    m.set(nombre, a);
+  }
+  const lista = [...m.values()].sort((a, b) => b.total - a.total).slice(0, 50);
   return seccion("Clientes por facturación", tabla([
     { t: "#", v: (_, i) => `<span class="font-bold text-slate-300">${i + 1}</span>` },
     { t: "Cliente", v: (c) => `<span class="font-medium">${esc(c.nombre)}</span>` },
     { t: "Compras", der: 1, v: (c) => c.compras },
     { t: "Total", der: 1, v: (c) => `<span class="font-bold text-emerald-600">${money(c.total)}</span>` },
     { t: "Ticket prom.", der: 1, v: (c) => money(c.compras ? c.total / c.compras : 0) },
-  ], topClientes(50, idsVentasRango()), { vacio: "Sin ventas a clientes" }));
+  ], lista, { vacio: "Sin ventas registradas" }));
 }
 
 function panelProveedores() {
@@ -125,19 +136,19 @@ function panelProveedores() {
 
 function panelInventario() {
   const activos = state.productos.filter((p) => Number(p.activo) === 1);
-  const idsVigentes = new Set(ventasVigentes().map((v) => v.id_venta));
+  const idsVigentes = new Set(ventasVigentes().map((v) => v.id));
   const detalleVigente = state.detalle_ventas.filter((d) => idsVigentes.has(d.venta_id));
-  const sinVenta = activos.filter((p) => !detalleVigente.some((d) => d.producto_id === p.id_producto));
+  const sinVenta = activos.filter((p) => !detalleVigente.some((d) => d.producto_id === p.id));
   return `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     ${seccion(`Productos sin ninguna venta (${sinVenta.length})`, tabla([
-      { t: "Producto", v: (p) => esc(p.nombre_producto) },
+      { t: "Producto", v: (p) => esc(p.nombre) },
       { t: "Stock", der: 1, v: (p) => `<span class="font-bold">${p.stock}</span>` },
-      { t: "Valor costo", der: 1, v: (p) => money(Number(p.stock || 0) * Number(p.precio_compra || 0)) },
+      { t: "Valor costo", der: 1, v: (p) => money(Number(p.stock || 0) * Number(costoUnitario(p.id) || 0)) },
     ], sinVenta, { vacio: "Todo el inventario tiene salida" }))}
     ${seccion("Distribución por categoría", tabla([
-      { t: "Categoría", v: (c) => esc(c.nombre_categoria) },
-      { t: "Productos", der: 1, v: (c) => activos.filter((p) => p.categoria_id === c.id_categoria).length },
-      { t: "Unidades", der: 1, v: (c) => num(activos.filter((p) => p.categoria_id === c.id_categoria).reduce((s, p) => s + Number(p.stock || 0), 0)) },
+      { t: "Categoría", v: (c) => esc(c.nombre) },
+      { t: "Productos", der: 1, v: (c) => activos.filter((p) => p.categoria_id === c.id).length },
+      { t: "Unidades", der: 1, v: (c) => num(activos.filter((p) => p.categoria_id === c.id).reduce((s, p) => s + Number(p.stock || 0), 0)) },
     ], state.categorias, { vacio: "Sin categorías" }))}
   </div>`;
 }

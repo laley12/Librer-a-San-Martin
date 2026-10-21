@@ -70,7 +70,10 @@
 
     <main id="vista" class="flex-1 p-6 overflow-y-auto scroll"></main>
 
-    <footer class="px-6 py-2 text-[11px] text-slate-400 border-t border-slate-200 flex justify-between">
+    <!-- Barra inferior móvil (visible solo en pantallas pequeñas) -->
+    <nav id="navInferior" class="md:hidden bg-white border-t border-slate-200 flex shrink-0 sticky bottom-0 z-30 shadow-lg safe-b"></nav>
+
+    <footer class="hidden md:flex px-6 py-2 text-[11px] text-slate-400 border-t border-slate-200 justify-between">
       <span>v1.5 · Última carga: <span id="ultimaCarga">—</span></span>
       <span>RLS activo · Realtime en ventas, inventario, compras y clientes</span>
     </footer>
@@ -78,7 +81,7 @@
 </div>
 
 <script type="module">
-  import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js";
+  import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js?v=4.2";
   cablearGlobal();
   iniciar("desktop");
   registrarSW();

@@ -1,0 +1,33 @@
+{
+  "name": "libreria-san-martin",
+  "version": 2,
+  "framework": "vite",
+  "builds": [
+    {
+      "src": "frontend/vite.config.js",
+      "use": "@vercel/static",
+      "config": {
+        "maxDuration": 30
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "frontend/dist/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "VITE_API_URL": "https://libreria-san-martin.vercel.app/api/v1",
+    "SUPABASE_URL": "@supabase_url",
+    "SUPABASE_ANON_KEY": "@supabase_anon_key"
+  },
+  "install": {
+    "dependencies": true,
+    "scripts": true
+  },
+  "git": {
+    "deploymentBranch": "main"
+  }
+}

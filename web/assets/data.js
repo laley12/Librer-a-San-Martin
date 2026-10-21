@@ -19,6 +19,22 @@ TABLAS.forEach((t) => (state[t] = []));
 export let estadoRealtime = false;
 
 async function traer(tabla, columnas = "*") {
+  if (tabla === "usuarios") {
+    try {
+      const token = await tokenActual();
+      const r = await fetch(`/api/usuarios?_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (r.ok) {
+        const list = await r.json();
+        if (Array.isArray(list) && list.length > 0) return list;
+      }
+    } catch (e) {
+      console.warn("fetch /api/usuarios fallback:", e);
+    }
+    if (state.usuarios && state.usuarios.length > 0) return state.usuarios;
+  }
   const { data, error } = await sb.from(tabla).select(columnas).limit(2000);
   if (error) {
     if (!state.errores.includes(error.message)) state.errores.push(error.message);
@@ -141,25 +157,108 @@ export const repo = {
   },
 
   /* ---- Usuarios (tabla única) ---- */
-  async guardarUsuario({ usuarioId, nombre, rol, estado, idUsuario }) {
+  async guardarUsuario({ usuarioId, nombre, usuario, email, rol, estado, foto, pin, claveMaestra, idUsuario }) {
+    const token = await tokenActual();
     const booleano = estado === true || String(estado).toLowerCase() === "activo";
-    return actualizar("usuarios", { nombre, rol, estado: booleano }, { id: usuarioId });
+    const body = { usuarioId, nombre, usuario, email, rol, estado: booleano, foto, pin, claveMaestra };
+    const r = await fetch("/api/usuarios", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || "No se pudo guardar la información del usuario");
+
+    // Actualización inmediata en memoria local para que se refleje sin recargar
+    const actualizado = j.usuario || {
+      id: usuarioId, nombre, usuario, email, rol, estado: booleano, foto,
+    };
+    const idx = state.usuarios.findIndex((x) => String(x.id) === String(usuarioId));
+    if (idx >= 0) {
+      state.usuarios[idx] = Object.assign({}, state.usuarios[idx], actualizado);
+    } else {
+      state.usuarios.push(actualizado);
+    }
+
+    // Si es el usuario actualmente en sesión, actualizar nombre y rol en pantalla
+    const miId = document.getElementById("nombreUsuario")?.dataset?.userId;
+    if (String(idUsuario || miId) === String(usuarioId)) {
+      if (document.getElementById("nombreUsuario")) document.getElementById("nombreUsuario").textContent = nombre;
+      if (document.getElementById("rolUsuario")) document.getElementById("rolUsuario").textContent = rol;
+      if (document.getElementById("avatarUsuario") && foto) document.getElementById("avatarUsuario").src = foto;
+    }
+
+    // Emitir broadcast en tiempo real para todos los clientes (computadora y móvil/PWA)
+    try {
+      if (canal) {
+        canal.send({
+          type: "broadcast",
+          event: "usuario_actualizado",
+          payload: { usuario: actualizado },
+        });
+      }
+    } catch (e) {
+      console.warn("broadcast error:", e);
+    }
+
+    return j;
   },
 
   async cambiarEstadoUsuario({ usuarioId, estado, idUsuario }) {
+    const token = await tokenActual();
     const booleano = estado === true || String(estado).toLowerCase() === "activo";
-    return actualizar("usuarios", { estado: booleano }, { id: usuarioId });
+    let res = null;
+    try {
+      const r = await fetch("/api/usuarios", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ usuarioId, estado: booleano }),
+      });
+      if (r.ok) res = await r.json();
+    } catch (e) {
+      console.warn("patch /api/usuarios fallback:", e);
+    }
+    if (!res) res = await actualizar("usuarios", { estado: booleano }, { id: usuarioId });
+
+    // Actualizar en memoria
+    const idx = state.usuarios.findIndex((x) => String(x.id) === String(usuarioId));
+    if (idx >= 0) state.usuarios[idx].estado = booleano;
+
+    try {
+      if (canal) {
+        canal.send({
+          type: "broadcast",
+          event: "usuario_actualizado",
+          payload: { usuario: state.usuarios[idx] },
+        });
+      }
+    } catch {}
+
+    return res;
   },
 
-  async crearUsuario({ nombre, usuario, pin, rol, estado, idUsuario }) {
+  async crearUsuario({ nombre, usuario, pin, rol, estado, email, foto, idUsuario }) {
     const token = await tokenActual();
     const r = await fetch("/api/usuarios-nuevo", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ nombre, usuario, pin, rol, estado }),
+      body: JSON.stringify({ nombre, usuario, pin, rol, estado, email, foto }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || `No se pudo crear el usuario (${r.status})`);
+
+    if (j.usuario) {
+      state.usuarios.push(j.usuario);
+      try {
+        if (canal) {
+          canal.send({
+            type: "broadcast",
+            event: "usuario_actualizado",
+            payload: { usuario: j.usuario },
+          });
+        }
+      } catch {}
+    }
     return j;
   },
 
@@ -189,20 +288,100 @@ export const repo = {
   },
 };
 
-/* ---------------- realtime ---------------- */
+/* ---------------- realtime & presencia ---------------- */
+export const onlineUsuarios = new Set();
 let canal = null;
+let canalPresencia = null;
+
 export function conectarRealtime(cb) {
   if (canal) return canal;
-  const tablas = ["ventas", "detalle_ventas", "productos", "compras"];
+  const tablas = ["ventas", "detalle_ventas", "productos", "compras", "usuarios"];
   canal = sb.channel("lsm-todo");
   for (const t of tablas) {
     canal.on("postgres_changes", { event: "*", schema: "public", table: t }, (p) => cb(t, p));
   }
+  // Escuchar broadcast de actualizaciones de usuarios desde cualquier dispositivo
+  canal.on("broadcast", { event: "usuario_actualizado" }, (p) => {
+    if (p?.payload?.usuario) {
+      const u = p.payload.usuario;
+      const idx = state.usuarios.findIndex((x) => String(x.id) === String(u.id));
+      if (idx >= 0) {
+        state.usuarios[idx] = Object.assign({}, state.usuarios[idx], u);
+      } else {
+        state.usuarios.push(u);
+      }
+      cb("usuarios", { event: "UPDATE", new: u });
+    }
+  });
   canal.subscribe((estado) => {
     estadoRealtime = estado === "SUBSCRIBED";
     cb("estado", estado);
   });
   return canal;
+}
+
+export function conectarPresencia(perfil, onCambio) {
+  if (!sb) return null;
+  const key = String(perfil?.usuario || perfil?.id || "anonimo").toLowerCase();
+
+  if (canalPresencia) {
+    if (perfil) {
+      canalPresencia.track({
+        id: perfil.id || perfil.usuario_id,
+        usuario: String(perfil.usuario || "").toLowerCase(),
+        nombre: perfil.nombre,
+        rol: perfil.rol,
+        email: perfil.email || "",
+        online_at: new Date().toISOString(),
+      }).catch(() => {});
+    }
+    return canalPresencia;
+  }
+
+  canalPresencia = sb.channel("lsm-presencia", {
+    config: { presence: { key } },
+  });
+
+  const sincronizar = () => {
+    const estado = canalPresencia.presenceState();
+    onlineUsuarios.clear();
+    for (const k of Object.keys(estado)) {
+      onlineUsuarios.add(k.toLowerCase());
+      (estado[k] || []).forEach((u) => {
+        if (u.usuario) onlineUsuarios.add(String(u.usuario).toLowerCase());
+        if (u.id) onlineUsuarios.add(String(u.id));
+        if (u.email) onlineUsuarios.add(String(u.email).toLowerCase());
+      });
+    }
+    if (onCambio) onCambio(onlineUsuarios);
+  };
+
+  canalPresencia
+    .on("presence", { event: "sync" }, sincronizar)
+    .on("presence", { event: "join" }, sincronizar)
+    .on("presence", { event: "leave" }, sincronizar)
+    .subscribe(async (status) => {
+      if (status === "SUBSCRIBED" && perfil) {
+        await canalPresencia.track({
+          id: perfil.id || perfil.usuario_id,
+          usuario: String(perfil.usuario || "").toLowerCase(),
+          nombre: perfil.nombre,
+          rol: perfil.rol,
+          email: perfil.email || "",
+          online_at: new Date().toISOString(),
+        }).catch(() => {});
+      }
+    });
+
+  return canalPresencia;
+}
+
+export function estaEnLinea(u) {
+  if (!u) return false;
+  const usr = String(u.usuario || "").toLowerCase();
+  const id = String(u.id || "");
+  const email = String(u.email || "").toLowerCase();
+  return onlineUsuarios.has(usr) || onlineUsuarios.has(id) || (email && onlineUsuarios.has(email));
 }
 
 /* ---------------- cálculos compartidos ---------------- */

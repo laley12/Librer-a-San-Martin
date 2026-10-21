@@ -1,0 +1,30 @@
+COMMIT Y ESTADO GENERAL  
+----------------------------------------  
+b0080dc feat(tesis): baja logica usuarios/productos, alertas stock bajo y filtro por rango de fechas (HU2, HU3, HU8, HU9)
+ 
+STACK TECNOLOGICO Y BACKEND SERVERLESS  
+----------------------------------------  
+Frontend Web/Movil: Vanilla JS, HTML5, CSS3 (Tailwind CDN), PWA (sw.js, manifest.webmanifest), Chart.js, html2canvas, qrcodejs.  
+Backend (Serverless Vercel): Node.js API routes en web/api/ (_lib.js, login.js, clave.js, usuario-pin.js, usuarios-nuevo.js). Verificacion hash_remoto OK.  
+DB: Supabase PostgreSQL (RLS via auth.jwt().email - 
+ 
+ESTRUCTURA DE CARPETAS DEL REPOSITORIO  
+----------------------------------------  
+Listado de rutas de carpetas
+El número de serie del volumen es D489-632B
+C:\XAMPP\HTDOCS\LIBRERIA_SAN_MARTIN\WEB
++---.vercel
++---api
+\---assets
+    \---views
+ 
+RESULTADO DE PRUEBAS Y UBICACION DE CAPTURAS (HU2, HU8, HU9)  
+----------------------------------------  
+- Migracion+Seed: OK (runner pg).  
+- Deploy Vercel: https://libreria-san-martin.vercel.app  
+- hash_remoto.js: 16/16 iguales, 0 distintos.  
+- GitHub: commit b0080dc - (sincronizado).  
+- Capturas HU2/HU8/HU9: C:\\Users\\HP\\AppData\\Local\\Temp\\opencode\\capturas_hu2\\ (11 PNG)  
+  01_login.png,02_bienvenida.png,03_usuarios_admin.png,04_modal_nuevo_usuario.png,05_modal_editar_usuario.png,06_baja_confirmacion.png,07_stock_bajo.png,08_dashboard_kpi.png,09_dashboard_filtros_fecha.png,10_reportes.png,11_reportes_productos.png  
+  
+VALIDACION: 100% alineado al ER de 8 tablas - APROBACION FINAL LISTA. 
