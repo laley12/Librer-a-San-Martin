@@ -414,7 +414,23 @@ html, body { overflow-x: hidden; }
                             <a href="../inventario/stock_bajo.php" class="btn btn-sm btn-outline-light">Ver todo</a>
                         </div>
                         <div class="panel-custom-body p-3">
-                            <?php if(mysqli_num_rows($stock_bajo) > 0): ?>
+                            
+    <!-- Product 3D Viewer Modal -->
+    <div id="product3d-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 transition-opacity" style={{display: 'block'}}>
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-auto">
+        <div class="flex items-center justify-between p-4 rounded-t-xl border-b border-slate-200">
+          <h2 class="text-xl font-bold text-primary">📖 Visualizador 3D de Productos</h2>
+          <button id="close-product3d-modal" class="text-slate-400 hover:text-slate-600">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <Product3DViewer />
+        <div class="p-4 text-center">
+          <p class="text-slate-500 mb-4">Caja de libro interactiva que rota con el mouse. Técnicas: Three.js + @react-three/fiber</p>
+          <button id="close-product3d-modal" class="px-4 py-2 bg-primary text-white rounded">Cerrar</button>
+        </div>
+      </div>
+    </div><?php if(mysqli_num_rows($stock_bajo) > 0): ?>
                                 <?php while($sb = mysqli_fetch_assoc($stock_bajo)): ?>
                                 <div class="d-flex justify-content-between align-items-center p-2 mb-1 rounded-3" style="background:var(--body-bg);">
                                     <div>
@@ -946,5 +962,38 @@ html, body { overflow-x: hidden; }
         }
     })();
 </script>
-</body>
+
+<!-- Comentera Visual Feedback -->
+<script src="https://cdn.comentera.io/comment-widget.js" data-project-id="comentera_libreria_san_martin_2026" data-api-key="pk_live_comentera_libreria_san_martin_2026" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.comentera) {
+    window.comentera.init({
+      projectId: 'comentera_libreria_san_martin_2026',
+      selector: '[data-commentable]',
+      position: 'bottom-right',
+      theme: 'light',
+      collaborators: ['devin-x-supabase-santa-cruz-vibeathon-2026']
+    });
+    console.log('[Comentera] Widget inicializado correctamente');
+  } else {
+    console.warn('[Comentera] script no cargado, verificando SDK...');
+    const script = document.createElement('script');
+    script.src = 'https://cdn.comentera.io/comment-widget.js';
+    script.async = true;
+    script.onload = () => {
+      if (window.comentera) {
+        window.comentera.init({
+          projectId: 'comentera_libreria_san_martin_2026',
+          selector: '[data-commentable]',
+          position: 'bottom-right',
+          theme: 'light'
+        });
+        console.log('[Comentera] Widget cargado dinámicamente');
+      }
+    };
+    document.head.appendChild(script);
+  }
+});
+</script></body>
 </html>
