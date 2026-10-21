@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Librería San Martín - Panel Administrativo - Tarea 6: Nuevas Tecnologías" />
+    <title>Librería San Martín · Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icono.svg" type="image/svg+xml" />
+
+    <!-- ========================================================
+         COMENTERA VISUAL FEEDBACK
+         Script inyectado para permitir notas de revisión en la UI
+         Proyecto: comentera_libreria_san_martin_2026
+         ======================================================== -->
+    <script
+      src="https://cdn.comentera.io/comment-widget.js"
+      data-project-id="comentera_libreria_san_martin_2026"
+      data-api-key="pk_live_comentera_libreria_san_martin_2026"
+      defer
+    ></script>
+    <script>
+      // Inicializar Comentera cuando el DOM esté listo
+      document.addEventListener('DOMContentLoaded', function () {
+        if (window.comentera) {
+          window.comentera.init({
+            projectId: 'comentera_libreria_san_martin_2026',
+            selector: '[data-commentable]',
+            position: 'bottom-right',
+            theme: 'light',
+            collaborators: ['devin-x-supabase-santa-cruz-vibeathon-2026'],
+          });
+          console.log('[Comentera] Widget inicializado correctamente');
+        } else {
+          console.warn('[Comentera] script no cargado, verificando SDK...');
+          // Fallback: carga manual si es necesario
+          const script = document.createElement('script');
+          script.src = 'https://cdn.comentera.io/comment-widget.js';
+          script.async = true;
+          script.onload = () => {
+            if (window.comentera) {
+              window.comentera.init({
+                projectId: 'comentera_libreria_san_martin_2026',
+                selector: '[data-commentable]',
+                position: 'bottom-right',
+                theme: 'light',
+              });
+              console.log('[Comentera] Widget cargado dinámicamente');
+            }
+          };
+          document.head.appendChild(script);
+        }
+      });
+    </script>
+
+    <style>
+      html, body {
+        height: 100%;
+        overflow-x: hidden;
+      }
+      body {
+        font-family: 'Inter', 'Segoe UI', sans-serif;
+        background-color: #f1f5f9;
+      }
+      .scroll::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 8px;
+      }
+      .fade {
+        animation: fade 0.3s ease;
+      }
+      @keyframes fade {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: none; }
+      }
+      .shake {
+        animation: shake 0.45s ease;
+      }
+      @keyframes shake {
+        20%, 60% { transform: translateX(-3px); }
+        40%, 80% { transform: translateX(3px); }
+      }
+      .product-3d-container {
+        perspective: 1200px;
+        min-height: 600px;
+      }
+      .product-3d-container canvas {
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      }
+      .comentera-loader {
+        display: none;
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 50;
+        padding: 12px 16px;
+        background: #1e3c72;
+        color: white;
+        border-radius: 12px;
+        font-size: 12px;
+        box-shadow: 0 8px 24px rgba(30,60,114,0.3);
+      }
+      .comentera-container {
+        z-index: 40 !important;
+      }
+      @media (max-width: 768px) {
+        .comentera-loader {
+          bottom: 16px;
+          right: 16px;
+          padding: 8px 12px;
+          font-size: 11px;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-ClhBkEpG.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-e-vqAZQc.css">
+  </head>
+  <body class="bg-slate-50 text-slate-800">
+    <!-- Comentera loader (indica que el widget está listo) -->
+    <div class="comentera-loader">
+      📋 Comentera: Comentarios activos
+    </div>
+
+    <div id="root" class="min-h-screen"></div>
+
+  </body>
+</html>
