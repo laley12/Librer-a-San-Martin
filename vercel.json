@@ -1,33 +1,16 @@
 {
-  "name": "libreria-san-martin",
   "version": 2,
-  "framework": "vite",
-  "builds": [
-    {
-      "src": "frontend/vite.config.js",
-      "use": "@vercel/static",
-      "config": {
-        "maxDuration": 30
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "frontend/dist/$1"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "VITE_API_URL": "https://libreria-san-martin.vercel.app/api/v1",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_ANON_KEY": "@supabase_anon_key"
-  },
-  "install": {
-    "dependencies": true,
-    "scripts": true
-  },
-  "git": {
-    "deploymentBranch": "main"
-  }
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/assets/:path*", "destination": "/web/assets/:path*" },
+    { "source": "/movil.html", "destination": "/web/movil.html" },
+    { "source": "/sw.js", "destination": "/web/sw.js" },
+    { "source": "/manifest.webmanifest", "destination": "/web/manifest.webmanifest" },
+    { "source": "/icono.svg", "destination": "/web/icono.svg" },
+    { "source": "/icono-192.png", "destination": "/web/icono-192.png" },
+    { "source": "/icono-512.png", "destination": "/web/icono-512.png" },
+    { "source": "/", "destination": "/web/index.html" },
+    { "source": "/:path*", "destination": "/web/:path*" }
+  ]
 }
