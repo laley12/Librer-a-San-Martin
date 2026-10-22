@@ -24,6 +24,26 @@
   @keyframes shake { 20%,60% { transform: translateX(-3px) } 40%,80% { transform: translateX(3px) } }
   @media print { aside, header, footer { display: none !important; } }
 </style>
+
+<!-- Comentera Visual Feedback (Tarea 6 - Nuevas Tecnologías) -->
+<script
+  src="https://cdn.comentera.io/comment-widget.js"
+  data-project-id="comentera_libreria_san_martin_2026"
+  data-api-key="pk_live_comentera_libreria_san_martin_2026"
+  defer
+></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.comentera) {
+      window.comentera.init({
+        projectId: 'comentera_libreria_san_martin_2026',
+        selector: '[data-commentable]',
+        position: 'bottom-right',
+        theme: 'light',
+      });
+    }
+  });
+</script>
 </head>
 <body class="bg-slate-100 text-slate-800">
 
@@ -31,7 +51,7 @@
   <div id="login" class="fixed inset-0 z-50 flex items-center justify-center bg-cover bg-center" style="background-image:url('./assets/images/fondo-login.png')"></div>
 
 <!-- APP -->
-<div id="app" class="hidden min-h-screen flex">
+<div id="app" class="hidden min-h-screen flex" data-commentable>
   <aside class="w-64 bg-[#1e3c72] text-white flex flex-col shrink-0">
     <div class="px-5 py-5 border-b border-white/10 flex items-center gap-3">
       <span class="text-2xl">📚</span>
@@ -81,7 +101,7 @@
 </div>
 
 <script type="module">
-  import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js?v=4.2";
+  import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js?v=4.3";
   cablearGlobal();
   iniciar("desktop");
   registrarSW();

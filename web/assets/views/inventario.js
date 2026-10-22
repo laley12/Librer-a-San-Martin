@@ -45,7 +45,12 @@ export function render() {
 }
 
 function ctx_ayuda() {
-  return `<button data-nuevo class="shrink-0 px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white">+ Nuevo producto</button>`;
+  return `
+    <button data-abrir-3d class="shrink-0 px-3.5 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 transition-colors shadow-sm">
+      <span>🧊</span> <span>Visor 3D</span>
+    </button>
+    <button data-nuevo class="shrink-0 px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white">+ Nuevo producto</button>
+  `;
 }
 
 function productosFiltrados() {
@@ -242,6 +247,11 @@ export function mount(root, ctx) {
   root.addEventListener("click", async (e) => {
     const t = e.target.closest("[data-tab]");
     if (t) { tab = t.dataset.tab; ctx.rerender(); return; }
+
+    if (e.target.closest("[data-abrir-3d]")) {
+      if (ctx?.navegar) ctx.navegar("visor3d");
+      return;
+    }
 
     if (e.target.closest("[data-nuevo]")) return modalProducto();
 

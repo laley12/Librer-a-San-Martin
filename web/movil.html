@@ -31,6 +31,26 @@
   .safe-t { padding-top: env(safe-area-inset-top, 0px); }
   .no-sel { user-select: none; -webkit-user-select: none; }
 </style>
+
+<!-- Comentera Visual Feedback (Tarea 6 - Nuevas Tecnologías) -->
+<script
+  src="https://cdn.comentera.io/comment-widget.js"
+  data-project-id="comentera_libreria_san_martin_2026"
+  data-api-key="pk_live_comentera_libreria_san_martin_2026"
+  defer
+></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.comentera) {
+      window.comentera.init({
+        projectId: 'comentera_libreria_san_martin_2026',
+        selector: '[data-commentable]',
+        position: 'bottom-right',
+        theme: 'light',
+      });
+    }
+  });
+</script>
 </head>
 <body class="w-full h-full bg-slate-100 text-slate-800 no-sel">
 
@@ -38,7 +58,7 @@
   <div id="login" class="fixed inset-0 w-full h-full z-50 flex items-center justify-center bg-cover bg-center" style="background-image:url('./assets/images/fondo-login.png')"></div>
 
 <!-- APP: ocupa el 100% del dispositivo, sin marco ni emulador -->
-<div id="app" class="hidden w-full h-full min-h-screen flex flex-col">
+<div id="app" class="hidden w-full h-full min-h-screen flex flex-col" data-commentable>
   <header class="bg-[#1e3c72] text-white px-4 py-3 safe-t flex items-center justify-between shrink-0">
     <div class="flex items-center gap-3">
       <button id="btnMenu" class="w-10 h-10 -ml-1 grid place-items-center rounded-lg active:bg-white/15 text-xl">☰</button>
@@ -88,7 +108,7 @@
   window.addEventListener('unhandledrejection', (event) => {
     console.error('[LSM UNHANDLED PROMISE]', event.reason);
   });
-  import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js?v=4.2";
+  import { iniciar, cablearGlobal, registrarSW } from "/assets/app.js?v=4.3";
   console.log('[LSM] movil.html module script started');
   cablearGlobal();
   console.log('[LSM] cablearGlobal done, calling iniciar');

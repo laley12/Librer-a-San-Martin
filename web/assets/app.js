@@ -17,10 +17,11 @@ import * as compras from "./views/compras.js?v=4.2";
 import * as usuarios from "./views/usuarios.js?v=4.2";
 import * as reportes from "./views/reportes.js?v=4.2";
 import * as perfil from "./views/perfil.js?v=4.2";
+import * as visor3d from "./views/visor3d.js?v=4.2";
 
-export const MODULOS = [dashboard, ventas, inventario, compras, usuarios, reportes, perfil];
+export const MODULOS = [dashboard, ventas, inventario, visor3d, compras, usuarios, reportes, perfil];
 
-const ORDEN = ["dashboard", "ventas", "inventario", "compras", "usuarios", "reportes", "perfil"];
+const ORDEN = ["dashboard", "ventas", "inventario", "visor3d", "compras", "usuarios", "reportes", "perfil"];
 
 const BOTONES_MOVIL = [
   { id: "dashboard", icono: "🏠", t: "Inicio" },

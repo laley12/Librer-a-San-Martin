@@ -1,4 +1,4 @@
-const CACHE = "lsm-v42";
+const CACHE = "lsm-v43";
 const BASE = ["/", "/index.html", "/movil.html", "/manifest.webmanifest", "/icono.svg"];
 
 self.addEventListener("install", (e) => {

@@ -18,6 +18,36 @@ TABLAS.forEach((t) => (state[t] = []));
 
 export let estadoRealtime = false;
 
+const USUARIOS_OFICIALES = [
+  {
+    id: 1,
+    nombre: "Jeremy Gutierrez Sanchez",
+    usuario: "jeremy",
+    rol: "Administrador",
+    estado: true,
+    email: "gutierresyeremy0@gmail.com",
+    foto: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+  },
+  {
+    id: 2,
+    nombre: "Gustavo Guachalla Rocha",
+    usuario: "gustavo",
+    rol: "Vendedor",
+    estado: true,
+    email: "gustavoguachalla331@gmail.com",
+    foto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+  },
+  {
+    id: 3,
+    nombre: "Ricardo Bartolomeo",
+    usuario: "ricardo",
+    rol: "Empleado",
+    estado: true,
+    email: "ricardobartolomeo25@gmail.com",
+    foto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+  },
+];
+
 async function traer(tabla, columnas = "*") {
   if (tabla === "usuarios") {
     try {
@@ -38,7 +68,11 @@ async function traer(tabla, columnas = "*") {
   const { data, error } = await sb.from(tabla).select(columnas).limit(2000);
   if (error) {
     if (!state.errores.includes(error.message)) state.errores.push(error.message);
+    if (tabla === "usuarios") return USUARIOS_OFICIALES;
     return [];
+  }
+  if (tabla === "usuarios" && (!data || data.length === 0)) {
+    return USUARIOS_OFICIALES;
   }
   return data || [];
 }
@@ -92,6 +126,20 @@ export const repo = {
         venta_id: venta.id, producto_id: l.productoId, cantidad: l.cantidad, precio_unitario: l.precio,
       });
     }
+
+    // Notificación automática a Slack (Tarea 6 - Nuevas Tecnologías)
+    try {
+      fetch("/api/slack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipo: "venta",
+          titulo: `Nueva venta registrada por Bs ${total.toFixed(2)}`,
+          detalle: `Cliente: ${cliente || "General"} · ${lineas.length} producto(s) vendido(s)`,
+        }),
+      }).catch(() => {});
+    } catch (_) {}
+
     return { venta, total };
   },
 
@@ -104,7 +152,7 @@ export const repo = {
   },
 
   async crearProducto(datos) {
-    return insertar("productos", {
+    const nuevo = await insertar("productos", {
       nombre: datos.nombre,
       codigo: datos.codigo || null,
       categoria_id: datos.categoria_id || null,
@@ -112,6 +160,23 @@ export const repo = {
       stock: Number(datos.stock ?? 0),
       activo: true,
     });
+
+    // Notificación automática a Slack (Tarea 6 - Nuevas Tecnologías)
+    try {
+      fetch("/api/slack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipo: "producto",
+          titulo: `Nuevo producto añadido: ${datos.nombre}`,
+          detalle: `Código: ${datos.codigo || "S/C"} · Stock: ${datos.stock || 0}`,
+          precio: datos.precio_venta,
+          stock: datos.stock,
+        }),
+      }).catch(() => {});
+    } catch (_) {}
+
+    return nuevo;
   },
 
   async actualizarProducto(id, datos) {
