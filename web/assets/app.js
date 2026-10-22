@@ -6,18 +6,18 @@
    - una sola carga de datos + Realtime
    ===================================================================== */
 console.log('[LSM] app.js module loaded');
-import { sb, signIn, signOut, perfilActual, onAuthChange, hace } from "./supabase-client.js?v=4.2";
-import { cargarTodo, conectarRealtime, conectarPresencia, state } from "./data.js?v=4.2";
-import { $, esc, toast } from "./ui.js?v=4.2";
+import { sb, signIn, signOut, perfilActual, onAuthChange, hace } from "./supabase-client.js?v=4.5";
+import { cargarTodo, conectarRealtime, conectarPresencia, state } from "./data.js?v=4.5";
+import { $, esc, toast } from "./ui.js?v=4.5";
 
-import * as dashboard from "./views/dashboard.js?v=4.2";
-import * as ventas from "./views/ventas.js?v=4.2";
-import * as inventario from "./views/inventario.js?v=4.2";
-import * as compras from "./views/compras.js?v=4.2";
-import * as usuarios from "./views/usuarios.js?v=4.2";
-import * as reportes from "./views/reportes.js?v=4.2";
-import * as perfil from "./views/perfil.js?v=4.2";
-import * as visor3d from "./views/visor3d.js?v=4.2";
+import * as dashboard from "./views/dashboard.js?v=4.5";
+import * as ventas from "./views/ventas.js?v=4.5";
+import * as inventario from "./views/inventario.js?v=4.5";
+import * as compras from "./views/compras.js?v=4.5";
+import * as usuarios from "./views/usuarios.js?v=4.5";
+import * as reportes from "./views/reportes.js?v=4.5";
+import * as perfil from "./views/perfil.js?v=4.5";
+import * as visor3d from "./views/visor3d.js?v=4.5";
 
 export const MODULOS = [dashboard, ventas, inventario, visor3d, compras, usuarios, reportes, perfil];
 
