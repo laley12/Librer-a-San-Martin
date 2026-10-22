@@ -12,12 +12,12 @@ import { $, esc, toast } from "./ui.js?v=4.6";
 
 import * as dashboard from "./views/dashboard.js?v=4.6";
 import * as ventas from "./views/ventas.js?v=4.6";
-import * as inventario from "./views/inventario.js?v=4.6";
+import * as inventario from "./views/inventario.js?v=4.7";
 import * as compras from "./views/compras.js?v=4.6";
 import * as usuarios from "./views/usuarios.js?v=4.6";
 import * as reportes from "./views/reportes.js?v=4.6";
 import * as perfil from "./views/perfil.js?v=4.6";
-import * as visor3d from "./views/visor3d.js?v=4.6";
+import * as visor3d from "./views/visor3d.js?v=4.7";
 
 export const MODULOS = [dashboard, ventas, inventario, visor3d, compras, usuarios, reportes, perfil];
 

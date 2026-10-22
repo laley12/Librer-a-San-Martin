@@ -61,6 +61,32 @@ function BookBox({ productId, title, subtitle }) {
   );
 }
 
+class CanvasErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error) {
+    console.warn("Product3DViewer Canvas Error:", error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 rounded-xl text-white p-6 text-center">
+          <div className="w-24 h-36 bg-gradient-to-r from-blue-700 to-indigo-600 rounded-lg shadow-xl mb-3 flex items-center justify-center font-bold text-xs">
+            3D PRODUCT
+          </div>
+          <p className="text-xs text-slate-300">Modelo 3D en modo compatible</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Componente principal: Product3DViewer
 const Product3DViewer = ({ productId = '0001', title = 'Juguete 3D' }) => {
   const [showControls, setShowControls] = useState(true);
@@ -76,18 +102,20 @@ const Product3DViewer = ({ productId = '0001', title = 'Juguete 3D' }) => {
   return (
     <div className="product-3d-container w-full max-w-4xl mx-auto" data-commentable>
       <div className="h-[500px] w-full mb-6 relative">
-        <Canvas camera={{ position: [0, 1, 5], fov: 50 }} gl={{ antialias: true, alpha: false }} shadows className="bg-slate-50 rounded-xl">
-          <color attach="background" args={['#f1f5f9']} />
-          <ambientLight intensity={0.4} />
-          <directionalLight position={[10, 10, 5]} intensity={1.2} castShadow shadow-mapSize={[1024, 1024]} />
-          <pointLight position={[-5, 5, -5]} intensity={0.8} color="#fbbf24" />
-          <OrbitControls autoRotate={showControls} autoRotateSpeed={2.0} enableZoom={true} enablePan={false} minDistance={2} maxDistance={12} target={[0, 0.8, 0]} makeDefault />
-          <Float speed={1.5} floatIntensity={0.3}>
-            <BookBox productId={productId} title={title} subtitle="Libreria San Martin 2026" />
-          </Float>
-        </Canvas>
+        <CanvasErrorBoundary>
+          <Canvas camera={{ position: [0, 1, 5], fov: 50 }} gl={{ antialias: true, alpha: false, failIfMajorPerformanceCaveat: false }} fallback={<div className="w-full h-full flex items-center justify-center bg-slate-900 text-white text-xs">Cargando 3D...</div>} shadows className="bg-slate-50 rounded-xl">
+            <color attach="background" args={['#f1f5f9']} />
+            <ambientLight intensity={0.4} />
+            <directionalLight position={[10, 10, 5]} intensity={1.2} castShadow shadow-mapSize={[1024, 1024]} />
+            <pointLight position={[-5, 5, -5]} intensity={0.8} color="#fbbf24" />
+            <OrbitControls autoRotate={showControls} autoRotateSpeed={2.0} enableZoom={true} enablePan={false} minDistance={2} maxDistance={12} target={[0, 0.8, 0]} makeDefault />
+            <Float speed={1.5} floatIntensity={0.3}>
+              <BookBox productId={productId} title={title} subtitle="Libreria San Martin 2026" />
+            </Float>
+          </Canvas>
+        </CanvasErrorBoundary>
         <button onClick={() => setShowControls(!showControls)} className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm text-xs px-3 py-1 rounded-full shadow-md hover:bg-white transition-all">
-          {showControls ? 'Auto-rotar' : 'Auto-rotar'}
+          {showControls ? 'Pausar rotación' : 'Auto-rotar'}
         </button>
       </div>
       <div className="bg-white p-4 rounded-xl border border-slate-200 mb-4">

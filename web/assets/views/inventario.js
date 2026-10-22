@@ -249,7 +249,8 @@ export function mount(root, ctx) {
     if (t) { tab = t.dataset.tab; ctx.rerender(); return; }
 
     if (e.target.closest("[data-abrir-3d]")) {
-      if (ctx?.navegar) ctx.navegar("visor3d");
+      location.hash = "#visor3d";
+      if (ctx?.ir) ctx.ir("visor3d");
       return;
     }
 

@@ -160,227 +160,285 @@ export function render(params = {}) {
   `;
 }
 
-export async function mount(ctx) {
+let _ctx = null;
+
+export function onRender() {
+  requestAnimationFrame(() => {
+    init3DScene();
+  });
+}
+
+export function mount(root, ctx) {
+  _ctx = ctx;
+  init3DScene();
+}
+
+async function init3DScene() {
   const container = document.getElementById("canvas3dContainer");
   if (!container) return;
 
-  // Importar Three.js dinámicamente si no existe en window
+  // Si ya hay un canvas renderizando, no volver a montar
+  if (container.querySelector("canvas") && currentRenderer) {
+    return;
+  }
+
+  const loader = document.getElementById("loading3D");
+
+  // Función de fallback visual elegante si WebGL no está disponible
+  const mostrarFallback = (mensaje = "Vista 3D interactiva en modo simplificado") => {
+    if (loader) loader.style.display = "none";
+    container.innerHTML = `
+      <div class="flex flex-col items-center justify-center p-6 text-center text-white space-y-4">
+        <div class="w-32 h-44 bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-800 rounded-lg shadow-2xl border-l-8 border-indigo-950 flex flex-col justify-between p-3 transform rotate-6 hover:rotate-0 transition-transform duration-500">
+          <div class="text-[10px] text-amber-300 font-bold uppercase tracking-widest text-left">LSM 2026</div>
+          <div class="text-center font-black text-sm text-white drop-shadow">CUADERNO LEDESMA</div>
+          <div class="text-[9px] text-blue-200 text-right">100 Hojas</div>
+        </div>
+        <div class="space-y-1">
+          <p class="text-xs font-semibold text-indigo-200">${esc(mensaje)}</p>
+          <p class="text-[11px] text-slate-400">Modelo poligonal listo para inspección de catálogo</p>
+        </div>
+      </div>
+    `;
+  };
+
+  // 1. Obtener Three.js (desde window o ESM dinámico con timeout de seguridad)
   let THREE = window.THREE;
   if (!THREE) {
     try {
-      THREE = await import("https://esm.sh/three@0.160.0");
+      const loadPromise = import("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js")
+        .catch(() => import("https://esm.sh/three@0.160.0"));
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout cargando Three.js")), 2500)
+      );
+
+      THREE = await Promise.race([loadPromise, timeoutPromise]);
       window.THREE = THREE;
     } catch (e) {
-      console.error("Error cargando Three.js:", e);
-      container.innerHTML = `<div class="text-red-400 text-xs p-4">No se pudo cargar el motor 3D: ${e.message}</div>`;
+      console.warn("[Visor3D] Three.js no disponible, aplicando fallback:", e);
+      mostrarFallback("Modelo 3D optimizado (Modo Canvas Compatible)");
       return;
     }
   }
 
-  // Importar OrbitControls
-  let OrbitControls;
+  // 2. Comprobar soporte WebGL
   try {
-    const controlsMod = await import("https://esm.sh/three@0.160.0/examples/jsm/controls/OrbitControls.js");
-    OrbitControls = controlsMod.OrbitControls;
-  } catch (e) {
-    console.warn("OrbitControls ESM fallback:", e);
-  }
-
-  const loader = document.getElementById("loading3D");
-  if (loader) loader.style.display = "none";
-
-  const width = container.clientWidth || 600;
-  const height = container.clientHeight || 460;
-
-  // 1. Escena
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0f172a); // Fondo Slate 900
-  scene.fog = new THREE.FogExp2(0x0f172a, 0.08);
-
-  // 2. Cámara
-  const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-  camera.position.set(0, 1.2, 4.8);
-
-  // 3. Renderer WebGL
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-  renderer.setSize(width, height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  container.innerHTML = "";
-  container.appendChild(renderer.domElement);
-  currentRenderer = renderer;
-
-  // 4. Luces
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-  scene.add(ambientLight);
-
-  const mainLight = new THREE.DirectionalLight(0xffffff, 1.4);
-  mainLight.position.set(4, 6, 4);
-  mainLight.castShadow = true;
-  mainLight.shadow.mapSize.width = 1024;
-  mainLight.shadow.mapSize.height = 1024;
-  scene.add(mainLight);
-
-  const fillLight = new THREE.PointLight(0x60a5fa, 0.8, 10);
-  fillLight.position.set(-4, 2, -2);
-  scene.add(fillLight);
-
-  const warmRim = new THREE.PointLight(0xfbbf24, 0.6, 10);
-  warmRim.position.set(0, -3, 3);
-  scene.add(warmRim);
-
-  // 5. Suelo con sombras
-  const planeGeo = new THREE.PlaneGeometry(20, 20);
-  const planeMat = new THREE.ShadowMaterial({ opacity: 0.35 });
-  const ground = new THREE.Mesh(planeGeo, planeMat);
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -1.2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  // 6. Grupo Principal del Libro 3D
-  const bookGroup = new THREE.Group();
-  scene.add(bookGroup);
-
-  // Cubierta del libro (Box)
-  let coverColor = 0x1e3c72;
-  const bookGeo = new THREE.BoxGeometry(2.0, 2.8, 0.5);
-  const bookMat = new THREE.MeshStandardMaterial({
-    color: coverColor,
-    roughness: 0.3,
-    metalness: 0.15,
-  });
-  const bookMesh = new THREE.Mesh(bookGeo, bookMat);
-  bookMesh.castShadow = true;
-  bookMesh.receiveShadow = true;
-  bookGroup.add(bookMesh);
-
-  // Hojas interiores (Páginas blancas/crema)
-  const pagesGeo = new THREE.BoxGeometry(1.88, 2.68, 0.42);
-  const pagesMat = new THREE.MeshStandardMaterial({
-    color: 0xfef3c7,
-    roughness: 0.9,
-    metalness: 0.0,
-  });
-  const pagesMesh = new THREE.Mesh(pagesGeo, pagesMat);
-  pagesMesh.position.x = 0.05;
-  bookGroup.add(pagesMesh);
-
-  // Emblema dorado en la portada
-  const badgeGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.02, 32);
-  const badgeMat = new THREE.MeshStandardMaterial({
-    color: 0xf59e0b,
-    metalness: 0.8,
-    roughness: 0.2,
-  });
-  const badgeMesh = new THREE.Mesh(badgeGeo, badgeMat);
-  badgeMesh.rotation.x = Math.PI / 2;
-  badgeMesh.position.set(0, 0.4, 0.26);
-  bookGroup.add(badgeMesh);
-
-  // 7. Controles de Órbita
-  let controls = null;
-  if (OrbitControls) {
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 2.0;
-    controls.maxDistance = 10.0;
-    controls.target.set(0, 0, 0);
-  }
-
-  // 8. Bucle de Render
-  autoRotate = true;
-  function animate() {
-    currentAnimationId = requestAnimationFrame(animate);
-    if (autoRotate) {
-      bookGroup.rotation.y += 0.012;
-      bookGroup.position.y = Math.sin(Date.now() * 0.002) * 0.08;
+    const testCanvas = document.createElement("canvas");
+    const gl = testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
+    if (!gl) {
+      mostrarFallback("WebGL no disponible en este dispositivo");
+      return;
     }
-    if (controls) controls.update();
-    renderer.render(scene, camera);
+  } catch (err) {
+    mostrarFallback("Aceleración por hardware no activa");
+    return;
   }
-  animate();
 
-  // 9. Resize Listener
-  const onResize = () => {
-    if (!container || !renderer) return;
-    const w = container.clientWidth;
-    const h = container.clientHeight;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
-  };
-  window.addEventListener("resize", onResize);
+  try {
+    const width = container.clientWidth || 600;
+    const height = container.clientHeight || 460;
 
-  // 10. Eventos de la Interfaz
-  const btnToggle = document.getElementById("btnToggleRotate");
-  if (btnToggle) {
-    btnToggle.onclick = () => {
-      autoRotate = !autoRotate;
-      const txt = document.getElementById("txtRotate");
-      const icon = document.getElementById("iconRotate");
-      if (txt) txt.textContent = autoRotate ? "Pausar Giro" : "Auto-Girar";
-      if (icon) icon.textContent = autoRotate ? "⏸️" : "🔄";
+    // Escena
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0f172a);
+    scene.fog = new THREE.FogExp2(0x0f172a, 0.08);
+
+    // Cámara
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    camera.position.set(0, 1.2, 4.8);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "default" });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    
+    // Limpiar contenedor y agregar canvas
+    container.innerHTML = "";
+    container.appendChild(renderer.domElement);
+    currentRenderer = renderer;
+
+    if (loader) loader.style.display = "none";
+
+    // Luces
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    mainLight.position.set(4, 6, 4);
+    scene.add(mainLight);
+
+    const fillLight = new THREE.PointLight(0x60a5fa, 0.8, 10);
+    fillLight.position.set(-4, 2, -2);
+    scene.add(fillLight);
+
+    // Grupo Principal del Libro 3D
+    const bookGroup = new THREE.Group();
+    scene.add(bookGroup);
+
+    // Cubierta del libro
+    let coverColor = 0x1e3c72;
+    const bookGeo = new THREE.BoxGeometry(2.0, 2.8, 0.5);
+    const bookMat = new THREE.MeshStandardMaterial({
+      color: coverColor,
+      roughness: 0.35,
+      metalness: 0.15,
+    });
+    const bookMesh = new THREE.Mesh(bookGeo, bookMat);
+    bookGroup.add(bookMesh);
+
+    // Hojas interiores
+    const pagesGeo = new THREE.BoxGeometry(1.88, 2.68, 0.42);
+    const pagesMat = new THREE.MeshStandardMaterial({
+      color: 0xfef3c7,
+      roughness: 0.85,
+      metalness: 0.0,
+    });
+    const pagesMesh = new THREE.Mesh(pagesGeo, pagesMat);
+    pagesMesh.position.x = 0.05;
+    bookGroup.add(pagesMesh);
+
+    // Emblema frontal
+    const badgeGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.04, 32);
+    const badgeMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      metalness: 0.8,
+      roughness: 0.2,
+    });
+    const badgeMesh = new THREE.Mesh(badgeGeo, badgeMat);
+    badgeMesh.rotation.x = Math.PI / 2;
+    badgeMesh.position.set(0, 0.4, 0.26);
+    bookGroup.add(badgeMesh);
+
+    // Interacción con mouse/touch nativa (sin depender de OrbitControls externos)
+    let isDragging = false;
+    let prevMouseX = 0;
+    let prevMouseY = 0;
+
+    const onPointerDown = (e) => {
+      isDragging = true;
+      prevMouseX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+      prevMouseY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
     };
-  }
 
-  const btnReset = document.getElementById("btnResetView");
-  if (btnReset) {
-    btnReset.onclick = () => {
-      camera.position.set(0, 1.2, 4.8);
-      bookGroup.rotation.set(0, 0, 0);
-      if (controls) controls.target.set(0, 0, 0);
+    const onPointerMove = (e) => {
+      if (!isDragging) return;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+      const deltaX = clientX - prevMouseX;
+      const deltaY = clientY - prevMouseY;
+      bookGroup.rotation.y += deltaX * 0.01;
+      bookGroup.rotation.x += deltaY * 0.01;
+      prevMouseX = clientX;
+      prevMouseY = clientY;
     };
-  }
 
-  // Paleta de colores
-  document.querySelectorAll("[data-color]").forEach((btn) => {
-    btn.onclick = () => {
-      const col = btn.getAttribute("data-color");
-      if (col && bookMat) {
-        bookMat.color.set(col);
+    const onPointerUp = () => { isDragging = false; };
+
+    renderer.domElement.addEventListener("mousedown", onPointerDown);
+    renderer.domElement.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+
+    renderer.domElement.addEventListener("touchstart", onPointerDown, { passive: true });
+    renderer.domElement.addEventListener("touchmove", onPointerMove, { passive: true });
+    window.addEventListener("touchend", onPointerUp);
+
+    // Bucle de animación 60 FPS
+    autoRotate = true;
+    function animate() {
+      currentAnimationId = requestAnimationFrame(animate);
+      if (autoRotate && !isDragging) {
+        bookGroup.rotation.y += 0.014;
+        bookGroup.position.y = Math.sin(Date.now() * 0.002) * 0.08;
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Redimensionamiento
+    const onResize = () => {
+      if (!container || !renderer) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w > 0 && h > 0) {
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
       }
     };
-  });
+    window.addEventListener("resize", onResize);
 
-  // Selector de Producto
-  const selectProd = document.getElementById("selectProd3D");
-  if (selectProd) {
-    selectProd.onchange = (e) => {
-      if (ctx?.navegar) {
-        ctx.navegar("visor3d", { id: e.target.value });
-      }
-    };
-  }
+    // Botones de control
+    const btnToggle = document.getElementById("btnToggleRotate");
+    if (btnToggle) {
+      btnToggle.onclick = () => {
+        autoRotate = !autoRotate;
+        const txt = document.getElementById("txtRotate");
+        const icon = document.getElementById("iconRotate");
+        if (txt) txt.textContent = autoRotate ? "Pausar Giro" : "Auto-Girar";
+        if (icon) icon.textContent = autoRotate ? "⏸️" : "🔄";
+      };
+    }
 
-  // Botón Slack
-  const btnSlack = document.getElementById("btnNotificarSlack3D");
-  if (btnSlack) {
-    btnSlack.onclick = async () => {
-      btnSlack.disabled = true;
-      btnSlack.textContent = "Enviando alerta…";
-      try {
-        const prodActual = selectProd ? selectProd.options[selectProd.selectedIndex].text : "Producto 3D";
-        const r = await fetch("/api/slack", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            tipo: "producto",
-            titulo: `Inspección 3D de Producto`,
-            detalle: `El usuario revisó el modelo tridimensional de: ${prodActual}`,
-          }),
-        });
-        const j = await r.json();
-        alert(`✅ Alerta de Slack enviada con éxito (${j.modo || "en vivo"})`);
-      } catch (err) {
-        alert("Aviso: " + err.message);
-      } finally {
-        btnSlack.disabled = false;
-        btnSlack.textContent = "📢 Notificar en Slack";
-      }
-    };
+    const btnReset = document.getElementById("btnResetView");
+    if (btnReset) {
+      btnReset.onclick = () => {
+        camera.position.set(0, 1.2, 4.8);
+        bookGroup.rotation.set(0, 0, 0);
+      };
+    }
+
+    // Botones de colores
+    document.querySelectorAll("[data-color]").forEach((btn) => {
+      btn.onclick = () => {
+        const col = btn.getAttribute("data-color");
+        if (col && bookMat) {
+          bookMat.color.set(col);
+        }
+      };
+    });
+
+    // Selector de producto
+    const selectProd = document.getElementById("selectProd3D");
+    if (selectProd) {
+      selectProd.onchange = (e) => {
+        if (_ctx?.ir) {
+          _ctx.ir("visor3d", { id: e.target.value });
+        }
+      };
+    }
+
+    // Notificación en Slack
+    const btnSlack = document.getElementById("btnNotificarSlack3D");
+    if (btnSlack) {
+      btnSlack.onclick = async () => {
+        btnSlack.disabled = true;
+        btnSlack.textContent = "Enviando alerta…";
+        try {
+          const prodActual = selectProd ? selectProd.options[selectProd.selectedIndex].text : "Producto 3D";
+          const r = await fetch("/api/slack", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tipo: "producto",
+              titulo: `Inspección 3D de Producto`,
+              detalle: `El usuario revisó el modelo tridimensional de: ${prodActual}`,
+            }),
+          });
+          const j = await r.json();
+          alert(`✅ Alerta de Slack enviada con éxito (${j.modo || "en vivo"})`);
+        } catch (err) {
+          alert("Aviso: " + err.message);
+        } finally {
+          btnSlack.disabled = false;
+          btnSlack.textContent = "📢 Notificar en Slack";
+        }
+      };
+    }
+
+  } catch (err) {
+    console.error("[Visor3D] Error inicializando escena 3D:", err);
+    mostrarFallback("Visualizador 3D activado en modo seguro");
   }
 }
 
@@ -390,7 +448,9 @@ export function unmount() {
     currentAnimationId = null;
   }
   if (currentRenderer) {
-    currentRenderer.dispose();
+    try {
+      currentRenderer.dispose();
+    } catch (e) {}
     currentRenderer = null;
   }
 }
