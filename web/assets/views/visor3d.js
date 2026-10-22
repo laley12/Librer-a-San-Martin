@@ -151,7 +151,7 @@ export function render(params = {}) {
             <span>✨</span> <span>Auditoría de Nuevas Tecnologías</span>
           </div>
           <p class="text-[11px] text-indigo-700 leading-normal">
-            Este visor interactivo cumple el requerimiento de <b>Gráficos 3D / Realidad Aumentada</b> estipulado para la revisión de la Ing. Lucy Q.
+            Auditoría de Nuevas Tecnologías - Módulo de Visualización 3D e Inspección Interactiva de Productos.
           </p>
         </div>
       </div>

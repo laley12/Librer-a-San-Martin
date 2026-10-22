@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- Libreria San Martin - Datos base semilla (negocio propio, sede unica)
 -- Ejecutar DESPUES de migracion_er.sql en el SQL Editor de Supabase.
 -- Incluye: usuarios demo, 4 categorias, 8 productos (5 con stock
@@ -39,13 +39,19 @@ insert into public.usuarios (nombre, usuario, clave, rol, estado) values
   'Empleado', false);
 
 -- ------------------------------------------------------------
--- Categorias
+-- Categorias (10 Categorias Oficiales)
 -- ------------------------------------------------------------
-insert into public.categorias (nombre, descripcion) values
- ('Escolar y Papelería', 'Útiles escolares, cuadernos y artículos para estudiantes'),
- ('Textos Universitarios', 'Libros técnicos, textos de estudio y calculadoras de apoyo'),
- ('Oficina y Escritorio', 'Papel, resmas, marcadores y artículos de escritorio'),
- ('Arte y Manualidades', 'Cartulinas, pinturas y materiales para manualidades');
+insert into public.categorias (id, nombre, descripcion) values
+ ('c1000000-0000-0000-0000-000000000001', 'Cuadernos y Anillados', 'Cuadernos universitarios, anillados, espirales y libretas escolares'),
+ ('c1000000-0000-0000-0000-000000000002', 'Escritorio y Bolígrafos', 'Bolígrafos, lápices, portaminas, resaltadores y accesorios de oficina'),
+ ('c1000000-0000-0000-0000-000000000003', 'Papelería y Hojas', 'Resmas de papel carta/oficio, hojas de carpeta, papel lustre y cartulinas'),
+ ('c1000000-0000-0000-0000-000000000004', 'Arte y Pintura', 'Pinturas acrílicas, acuarelas, témperas, pinceles y lienzos para dibujo'),
+ ('c1000000-0000-0000-0000-000000000005', 'Material Escolar', 'Estuches, compases, tijeras punta roma, borradores y tajadores'),
+ ('c1000000-0000-0000-0000-000000000006', 'Archivadores y Carpetas', 'Archivadores de palanca tamaño oficio, carpetas de plástico y sobres manila'),
+ ('c1000000-0000-0000-0000-000000000007', 'Textos y Libros', 'Diccionarios escolares, enciclopedias, textos de estudio y literatura'),
+ ('c1000000-0000-0000-0000-000000000008', 'Adhesivos y Cintas', 'Cintas de embalaje transparente, pegamentos en barra, siliconas líquidas'),
+ ('c1000000-0000-0000-0000-000000000009', 'Calculadoras y Tecnología', 'Calculadoras científicas y estándar, memorias USB y accesorios informáticos'),
+ ('c1000000-0000-0000-0000-000000000010', 'Reglería y Geometría', 'Juegos de reglas flexibles 30cm, escuadras, transportadores y escalímetros');
 
 -- ------------------------------------------------------------
 -- Proveedores
@@ -56,25 +62,19 @@ insert into public.proveedores (nombre, contacto, telefono) values
  ('Comercializadora Faber-Castell', 'Luis Alberto Paredes', '3 322 5566');
 
 -- ------------------------------------------------------------
--- Productos (precios en Bs; stock final ya calculado)
---   <-5-> = stock critico para activar las alertas visuales HU8 (ambar/rojo)
+-- Productos (10 Productos Oficiales con Stock y Precios)
 -- ------------------------------------------------------------
-insert into public.productos (codigo, nombre, categoria_id, precio_venta, stock, activo)
-select 'CUA-100', 'Cuaderno Ledesma 100 Hojas',      c.id, 6.50,  3, true  from public.categorias c where c.nombre = 'Escolar y Papelería'
-union all
-select 'BOL-AZ', 'Bolígrafo Faber-Castell Azul',     c.id, 5.00,  8, true  from public.categorias c where c.nombre = 'Escolar y Papelería'
-union all
-select 'BOL-NG', 'Bolígrafo Faber-Castell Negro',    c.id, 5.00,  0, true  from public.categorias c where c.nombre = 'Escolar y Papelería'
-union all
-select 'HCT-002', 'Hoja Carpeta Trazo',              c.id, 2.50,  4, true  from public.categorias c where c.nombre = 'Escolar y Papelería'
-union all
-select 'CAL-201', 'Calculadora Científica Casio',    c.id, 120.00, 15, true from public.categorias c where c.nombre = 'Textos Universitarios'
-union all
-select 'RPA-503', 'Resma de Papel A4 Carta 75g',     c.id, 28.00, 40, true  from public.categorias c where c.nombre = 'Oficina y Escritorio'
-union all
-select 'MRK-120', 'Marcadores Sharpie x12',          c.id, 39.00,  5, true  from public.categorias c where c.nombre = 'Oficina y Escritorio'
-union all
-select 'CRT-014', 'Cartulinas de Colores',           c.id, 3.00,   1, true  from public.categorias c where c.nombre = 'Arte y Manualidades';
+insert into public.productos (codigo, nombre, categoria_id, precio_venta, stock, activo) values
+ ('CUA-LED100', 'Cuaderno Ledesma 100 Hojas A4', 'c1000000-0000-0000-0000-000000000001', 6.50, 45, true),
+ ('BOL-FC07AZ', 'Bolígrafo Faber-Castell 0.7mm Azul', 'c1000000-0000-0000-0000-000000000002', 2.50, 120, true),
+ ('PAP-TRZ500', 'Resma Hojas Carta Trazo 500 Hojas', 'c1000000-0000-0000-0000-000000000003', 35.00, 30, true),
+ ('ART-PEL12C', 'Set Pinturas Acrílicas Pelican 12 colores', 'c1000000-0000-0000-0000-000000000004', 28.00, 18, true),
+ ('ESC-MAP3PZ', 'Estuche Escolar Maped 3 Piezas', 'c1000000-0000-0000-0000-000000000005', 15.00, 25, true),
+ ('ARC-PALOF', 'Archivador de Palanca Tamaño Oficio', 'c1000000-0000-0000-0000-000000000006', 18.00, 35, true),
+ ('LIB-SANTIL', 'Diccionario Escolar Ilustrado Santillana', 'c1000000-0000-0000-0000-000000000007', 45.00, 12, true),
+ ('ADH-CIN48M', 'Cinta Embalaje Transparente 48mm', 'c1000000-0000-0000-0000-000000000008', 8.00, 50, true),
+ ('TEC-FX991L', 'Calculadora Científica Casio FX-991LA', 'c1000000-0000-0000-0000-000000000009', 130.00, 8, true),
+ ('REG-FLEX30', 'Juego de Reglas Flexibles 30cm', 'c1000000-0000-0000-0000-000000000010', 12.00, 40, true);
 
 -- ------------------------------------------------------------
 -- Compras historicas (usuario admin; fechas en las ultimas 3 semanas)

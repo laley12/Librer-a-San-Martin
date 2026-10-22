@@ -48,6 +48,32 @@ const USUARIOS_OFICIALES = [
   },
 ];
 
+export const CATEGORIAS_OFICIALES = [
+  { id: "c1000000-0000-0000-0000-000000000001", nombre: "Cuadernos y Anillados", descripcion: "Cuadernos universitarios, anillados, espirales y libretas escolares" },
+  { id: "c1000000-0000-0000-0000-000000000002", nombre: "Escritorio y Bolígrafos", descripcion: "Bolígrafos, lápices, portaminas, resaltadores y accesorios de oficina" },
+  { id: "c1000000-0000-0000-0000-000000000003", nombre: "Papelería y Hojas", descripcion: "Resmas de papel carta/oficio, hojas de carpeta, papel lustre y cartulinas" },
+  { id: "c1000000-0000-0000-0000-000000000004", nombre: "Arte y Pintura", descripcion: "Pinturas acrílicas, acuarelas, témperas, pinceles y lienzos para dibujo" },
+  { id: "c1000000-0000-0000-0000-000000000005", nombre: "Material Escolar", descripcion: "Estuches, compases, tijeras punta roma, borradores y tajadores" },
+  { id: "c1000000-0000-0000-0000-000000000006", nombre: "Archivadores y Carpetas", descripcion: "Archivadores de palanca tamaño oficio, carpetas de plástico y sobres manila" },
+  { id: "c1000000-0000-0000-0000-000000000007", nombre: "Textos y Libros", descripcion: "Diccionarios escolares, enciclopedias, textos de estudio y literatura" },
+  { id: "c1000000-0000-0000-0000-000000000008", nombre: "Adhesivos y Cintas", descripcion: "Cintas de embalaje transparente, pegamentos en barra, siliconas líquidas" },
+  { id: "c1000000-0000-0000-0000-000000000009", nombre: "Calculadoras y Tecnología", descripcion: "Calculadoras científicas y estándar, memorias USB y accesorios informáticos" },
+  { id: "c1000000-0000-0000-0000-000000000010", nombre: "Reglería y Geometría", descripcion: "Juegos de reglas flexibles 30cm, escuadras, transportadores y escalímetros" },
+];
+
+export const PRODUCTOS_OFICIALES = [
+  { id: "p1000000-0000-0000-0000-000000000001", codigo: "CUA-LED100", nombre: "Cuaderno Ledesma 100 Hojas A4", categoria_id: "c1000000-0000-0000-0000-000000000001", precio_venta: 6.50, stock: 45, activo: true },
+  { id: "p1000000-0000-0000-0000-000000000002", codigo: "BOL-FC07AZ", nombre: "Bolígrafo Faber-Castell 0.7mm Azul", categoria_id: "c1000000-0000-0000-0000-000000000002", precio_venta: 2.50, stock: 120, activo: true },
+  { id: "p1000000-0000-0000-0000-000000000003", codigo: "PAP-TRZ500", nombre: "Resma Hojas Carta Trazo 500 Hojas", categoria_id: "c1000000-0000-0000-0000-000000000003", precio_venta: 35.00, stock: 30, activo: true },
+  { id: "p1000000-0000-0000-0000-000000000004", codigo: "ART-PEL12C", nombre: "Set Pinturas Acrílicas Pelican 12 colores", categoria_id: "c1000000-0000-0000-0000-000000000004", precio_venta: 28.00, stock: 18, activo: true },
+  { id: "p1000000-0000-0000-0000-000000000005", codigo: "ESC-MAP3PZ", nombre: "Estuche Escolar Maped 3 Piezas", categoria_id: "c1000000-0000-0000-0000-000000000005", precio_venta: 15.00, stock: 25, activo: true },
+  { id: "p1000000-0000-0000-0000-000000000006", codigo: "ARC-PALOF", nombre: "Archivador de Palanca Tamaño Oficio", categoria_id: "c1000000-0000-0000-0000-000000000006", precio_venta: 18.00, stock: 35, activo: true },
+  { id: "p1000000-0000-0000-0000-000000000007", codigo: "LIB-SANTIL", nombre: "Diccionario Escolar Ilustrado Santillana", categoria_id: "c1000000-0000-0000-0000-000000000007", precio_venta: 45.00, stock: 12, activo: true },
+  { id: "p1000000-0000-0000-0000-000000000008", codigo: "ADH-CIN48M", nombre: "Cinta Embalaje Transparente 48mm", categoria_id: "c1000000-0000-0000-0000-000000000008", precio_venta: 8.00, stock: 50, activo: true },
+  { id: "p1000000-0000-0000-0000-000000000009", codigo: "TEC-FX991L", nombre: "Calculadora Científica Casio FX-991LA", categoria_id: "c1000000-0000-0000-0000-000000000009", precio_venta: 130.00, stock: 8, activo: true },
+  { id: "p1000000-0000-0000-0000-000000000010", codigo: "REG-FLEX30", nombre: "Juego de Reglas Flexibles 30cm", categoria_id: "c1000000-0000-0000-0000-000000000010", precio_venta: 12.00, stock: 40, activo: true },
+];
+
 async function traer(tabla, columnas = "*") {
   if (tabla === "usuarios") {
     try {
@@ -69,10 +95,25 @@ async function traer(tabla, columnas = "*") {
   if (error) {
     if (!state.errores.includes(error.message)) state.errores.push(error.message);
     if (tabla === "usuarios") return USUARIOS_OFICIALES;
+    if (tabla === "categorias") return CATEGORIAS_OFICIALES;
+    if (tabla === "productos") return PRODUCTOS_OFICIALES;
     return [];
   }
-  if (tabla === "usuarios" && (!data || data.length === 0)) {
-    return USUARIOS_OFICIALES;
+  if (tabla === "usuarios") {
+    if (!data || data.length === 0) return USUARIOS_OFICIALES;
+    return data;
+  }
+  if (tabla === "categorias") {
+    if (!data || data.length === 0) return CATEGORIAS_OFICIALES;
+    const nombres = new Set(data.map((c) => (c.nombre || "").trim().toLowerCase()));
+    const faltantes = CATEGORIAS_OFICIALES.filter((c) => !nombres.has(c.nombre.toLowerCase()));
+    return [...data, ...faltantes];
+  }
+  if (tabla === "productos") {
+    if (!data || data.length === 0) return PRODUCTOS_OFICIALES;
+    const nombres = new Set(data.map((p) => (p.nombre || "").trim().toLowerCase()));
+    const faltantes = PRODUCTOS_OFICIALES.filter((p) => !nombres.has(p.nombre.toLowerCase()));
+    return [...data, ...faltantes];
   }
   return data || [];
 }
