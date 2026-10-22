@@ -22,3 +22,15 @@ assets/uploads/qr/*
 *.log
 *.tmp
 .kilo/
+
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Secret/token files
+vercel_token.txt
+*.token
+*.secret
+.env
+.env.local
+.env.*.local
