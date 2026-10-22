@@ -34,3 +34,4 @@ vercel_token.txt
 .env
 .env.local
 .env.*.local
+.vercel
