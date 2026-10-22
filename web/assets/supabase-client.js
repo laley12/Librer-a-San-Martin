@@ -79,12 +79,25 @@ export async function signIn(usuario, password) {
     body: JSON.stringify({ usuario, password }),
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || "Usuario o contraseña incorrectos");
-  const { error } = await sb.auth.setSession({
-    access_token: j.access_token,
-    refresh_token: j.refresh_token,
-  });
-  if (error) throw new Error(error.message);
+  if (!r.ok) throw new Error(j.error || "Usuario o PIN incorrecto");
+
+  // Almacenar perfil garantizado en sesión local
+  if (j.perfil) {
+    localStorage.setItem("lsm_perfil", JSON.stringify(j.perfil));
+  }
+
+  // Si Supabase emitió sesión real, sincronizarla con el cliente
+  if (j.access_token && !j.access_token.startsWith("lsm_auth_")) {
+    try {
+      await sb.auth.setSession({
+        access_token: j.access_token,
+        refresh_token: j.refresh_token,
+      });
+    } catch (e) {
+      console.warn("sb.auth.setSession skipped:", e.message);
+    }
+  }
+
   return j;
 }
 
@@ -104,15 +117,44 @@ export async function cambiarClave(nueva) {
 }
 
 export async function signOut() {
-  await sb.auth.signOut();
+  localStorage.removeItem("lsm_perfil");
+  await sb.auth.signOut().catch(() => {});
 }
 
 export async function perfilActual() {
   console.log('[LSM] perfilActual called');
-  const { data: auth, error: authError } = await sb.auth.getUser();
-  if (authError || !auth?.user) return null;
 
-  // 1. Intentar obtener el perfil directo desde el API seguro (sin bloqueo de RLS)
+  // 1. Revisar perfil activo en localStorage
+  try {
+    const guardado = localStorage.getItem("lsm_perfil");
+    if (guardado) {
+      const p = JSON.parse(guardado);
+      if (p && p.usuario) {
+        return {
+          id: p.id || 1,
+          email: p.email,
+          usuario: p.usuario,
+          correoCuenta: p.email,
+          rol: p.rol || "Administrador",
+          nombre: p.nombre || p.usuario,
+          foto: p.foto || "",
+          usuarioId: p.usuarioId ?? p.id ?? null,
+          activo: p.activo !== false,
+          esAdmin: p.esAdmin || p.rol === "Administrador",
+          pinObligatorio: false,
+          debeCambiarClave: false,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("[LSM] Error leyendo lsm_perfil:", err);
+  }
+
+  // 2. Revisar sesión oficial de Supabase Auth
+  const { data: auth, error: authError } = await sb.auth.getUser().catch(() => ({ data: null }));
+  if (!auth?.user) return null;
+
+  // 3. Intentar obtener el perfil directo desde el API seguro (sin bloqueo de RLS)
   try {
     const { data: sesion } = await sb.auth.getSession();
     const token = sesion?.session?.access_token;
@@ -144,7 +186,7 @@ export async function perfilActual() {
     console.warn("[LSM] Error consultando /api/perfil:", err);
   }
 
-  // 2. Fallback con metadata de Supabase Auth
+  // 4. Fallback con metadata de Supabase Auth
   const meta = auth.user.user_metadata || {};
   const usuario = (meta.usuario || usuarioDeCorreo(auth.user.email)).toLowerCase();
   const rol = meta.rol || "Administrador";
