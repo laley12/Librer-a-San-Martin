@@ -13,8 +13,10 @@ export const TABLAS = [
   "compras", "detalle_compras", "ventas", "detalle_ventas",
 ];
 
-export const state = { cargando: false, errores: [], ultimaCarga: null };
-TABLAS.forEach((t) => (state[t] = []));
+const _globalState = globalThis.__lsmState || { cargando: false, errores: [], ultimaCarga: null };
+TABLAS.forEach((t) => { if (!_globalState[t]) _globalState[t] = []; });
+globalThis.__lsmState = _globalState;
+export const state = _globalState;
 
 export let estadoRealtime = false;
 
@@ -73,6 +75,16 @@ export const PRODUCTOS_OFICIALES = [
   { id: "p1000000-0000-0000-0000-000000000009", codigo: "TEC-FX991L", nombre: "Calculadora Científica Casio FX-991LA", categoria_id: "c1000000-0000-0000-0000-000000000009", precio_venta: 130.00, stock: 8, activo: true },
   { id: "p1000000-0000-0000-0000-000000000010", codigo: "REG-FLEX30", nombre: "Juego de Reglas Flexibles 30cm", categoria_id: "c1000000-0000-0000-0000-000000000010", precio_venta: 12.00, stock: 40, activo: true },
 ];
+
+if (!state.categorias || state.categorias.length === 0) {
+  state.categorias = [...CATEGORIAS_OFICIALES];
+}
+if (!state.productos || state.productos.length === 0) {
+  state.productos = [...PRODUCTOS_OFICIALES];
+}
+if (!state.usuarios || state.usuarios.length === 0) {
+  state.usuarios = [...USUARIOS_OFICIALES];
+}
 
 async function traer(tabla, columnas = "*") {
   if (tabla === "usuarios") {
@@ -559,7 +571,7 @@ export function kpisRango(r) {
   const costo = detalle.reduce((s, d) => s + Number(d.cantidad || 0) * costoUnitario(d.producto_id), 0);
   const comprasTbl = state.compras.filter((c) => enPeriodo(c.fecha, rc));
   const compras = comprasTbl.reduce((s, c) => s + Number(c.total || 0), 0);
-  const activos = state.productos.filter((p) => Number(p.activo) === 1);
+  const activos = state.productos.filter((p) => p && (p.activo === true || p.activo === 1 || Number(p.activo) === 1 || p.activo === undefined));
   return {
     inicio: rc.inicio, fin: rc.fin,
     ventas, count: v.length, unidades, ticket: v.length ? ventas / v.length : 0,
@@ -601,7 +613,7 @@ export function kpis() {
   const idsHoy = new Set(vHoy.map((v) => v.id));
   const unidades = state.detalle_ventas.filter((d) => idsHoy.has(d.venta_id))
     .reduce((s, d) => s + Number(d.cantidad || 0), 0);
-  const activos = state.productos.filter((p) => Number(p.activo) === 1);
+  const activos = state.productos.filter((p) => p && (p.activo === true || p.activo === 1 || Number(p.activo) === 1 || p.activo === undefined));
   const comprasMes = state.compras.filter((c) => String(c.fecha).slice(0, 7) === mes);
   const costoVentasMes = state.detalle_ventas
     .filter((d) => vMes.some((v) => v.id === d.venta_id))

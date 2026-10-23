@@ -57,15 +57,15 @@ function productosFiltrados() {
   const q = filtro.texto.toLowerCase();
   let lista;
   if (filtro.vista === "inactivos") {
-    lista = state.productos.filter((p) => Number(p.activo) !== 1);
+    lista = state.productos.filter((p) => p && p.activo !== true && p.activo !== 1 && Number(p.activo) !== 1);
   } else {
-    lista = state.productos.filter((p) => Number(p.activo) === 1);
+    lista = state.productos.filter((p) => p && (p.activo === true || p.activo === 1 || Number(p.activo) === 1 || p.activo === undefined));
     if (filtro.vista === "bajo") lista = lista.filter((p) => Number(p.stock) <= 5);
     if (filtro.vista === "agotado") lista = lista.filter((p) => Number(p.stock) <= 0);
   }
   if (filtro.cat) lista = lista.filter((p) => String(p.categoria_id) === filtro.cat);
-  if (q) lista = lista.filter((p) => p.nombre.toLowerCase().includes(q) || String(p.codigo || "").toLowerCase().includes(q));
-  return lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  if (q) lista = lista.filter((p) => (p.nombre || "").toLowerCase().includes(q) || String(p.codigo || "").toLowerCase().includes(q));
+  return lista.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
 }
 
 function panel() {
@@ -77,7 +77,7 @@ function panel() {
 }
 
 function panelStockBajo() {
-  const bajo = state.productos.filter((p) => Number(p.activo) === 1 && Number(p.stock) <= 5)
+  const bajo = state.productos.filter((p) => p && (p.activo === true || p.activo === 1 || Number(p.activo) === 1 || p.activo === undefined) && Number(p.stock) <= 5)
     .sort((a, b) => a.stock - b.stock);
   const agotados = bajo.filter((p) => Number(p.stock) <= 0).length;
   return `
