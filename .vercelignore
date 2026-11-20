@@ -1,0 +1,12 @@
+# Despliegue a Vercel - Solo la app compilada en web/
+/sistema completo/
+/web_antiguo_html/
+/DOCUMENTO/
+/supabase/
+/node_modules/
+/vercel_token.txt
+/CREDENCIALES_ANTIGRAVITY.txt
+/*.sql
+/*.txt
+/*.docx
+/*.bak

@@ -1,0 +1,39 @@
+# Database credentials
+config/conexion.php
+
+# OS junk
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Uploaded assets (user content)
+assets/uploads/usuarios/*
+!assets/uploads/usuarios/.gitkeep
+assets/uploads/qr/*
+!assets/uploads/qr/.gitkeep
+
+# Temp files
+*.log
+*.tmp
+.kilo/
+
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Secret/token files
+vercel_token.txt
+CREDENCIALES_ANTIGRAVITY.txt
+*.token
+*.secret
+.env
+.env.local
+.env.*.local
+.vercel
+.env*

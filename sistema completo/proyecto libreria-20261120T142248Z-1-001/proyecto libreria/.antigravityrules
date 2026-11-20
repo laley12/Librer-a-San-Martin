@@ -1,0 +1,84 @@
+# ==============================================================================
+# REGLAS DE ARQUITECTURA Y GOBERNANZA - FLUTTER WEB
+# Sistema: Clean Architecture + Feature-First + Event-Driven Architecture (EDA)
+# ==============================================================================
+
+[GOVERNANCE_STATUS: STRICT_ENFORCEMENT]
+Este proyecto se rige por un marco de gobernanza arquitectónica estricto. Cualquier
+generación de código, refactorización o adición de módulos debe ser validada contra
+las siguientes reglas antes de ser implementada. Si alguna solicitud entra en
+conflicto con estas reglas, el agente DEBE detenerse, advertir la infracción y
+proponer la alternativa conforme a la arquitectura.
+
+---
+
+### 1. ARQUITECTURA FÍSICA Y CAPAS
+El sistema se organiza en 3 capas físicas bien diferenciadas:
+1. Capa de Presentación (Web): Vistas Flutter Web responsivas, componentes de UI y controladores de estado.
+2. Capa de Lógica de Negocio y Eventos: Casos de uso atómicos, entidades puras y bus de eventos.
+3. Capa de Datos / Persistencia: Modelos (DTOs), fuentes de datos remotas/locales y repositorios.
+
+---
+
+### 2. ORGANIZACIÓN FEATURE-FIRST
+- Toda funcionalidad de negocio reside en `lib/features/<nombre_feature>/`.
+- Está terminantemente prohibido agrupar código por tipo técnico global (ej: NO crear `lib/views/`, `lib/controllers/`, `lib/models/` globales con lógica de negocio).
+- Únicamente componentes compartidos y transversales sin lógica de negocio específica residen en `lib/core/` (errores, red base, bus de eventos, temas globales, helpers responsivos).
+
+---
+
+### 3. CLEAN ARCHITECTURE POR FEATURE
+Cada feature dentro de `lib/features/<nombre_feature>/` DEBE contener las siguientes subcarpetas obligatorias:
+
+#### 3.1. `domain/` (Capa de Dominio)
+- **Contenido**:
+  - `entities/`: Entidades del negocio (clases Dart inmutables).
+  - `repositories/`: Contratos e interfaces abstractas de repositorios.
+  - `usecases/`: Casos de uso únicos (Single Responsibility).
+  - `events/`: Eventos de dominio (`DomainEvent`) generados por este feature.
+- **Regla inquebrantable**: 
+  - ZERO dependencias de Flutter (`package:flutter/...`) o librerías de infraestructura/datos.
+  - Código Dart 100% puro y testeable sin mocks de UI ni frameworks.
+
+#### 3.2. `data/` (Capa de Datos)
+- **Contenido**:
+  - `models/`: DTOs con serialización (`fromJson`, `toJson`) y mapeadores a Entidades de Dominio.
+  - `datasources/`: Contratos e implementaciones de fuentes remotas (APIs, WebSockets) y locales (IndexedDB, LocalStorage, Memory).
+  - `repositories/`: Implementaciones concretas de los contratos definidos en `domain/repositories/`.
+- **Regla inquebrantable**:
+  - No debe importar ningún elemento de la capa de presentación (`presentation/`).
+  - Las dependencias hacia fuentes de datos externas o librerías HTTP deben aislarse en datasources.
+
+#### 3.3. `presentation/` (Capa de Presentación)
+- **Contenido**:
+  - `pages/`: Vistas completas preparadas para Flutter Web (layouts responsivos: desktop, tablet, mobile).
+  - `widgets/`: Componentes visuales y widgets locales reutilizables exclusivamente dentro de este feature.
+  - `controllers/` o `state/`: Controladores de estado (BLoC, Cubit, ChangeNotifier o Riverpod).
+- **Regla inquebrantable**:
+  - La UI NUNCA llama directamente a Repositorios o DataSources.
+  - La interacción de negocio se realiza ÚNICAMENTE a través de Casos de Uso (`UseCase`).
+  - Para interactuar con otros features, publica o escucha eventos a través del `EventBus`.
+
+---
+
+### 4. ARQUITECTURA ORIENTADA A EVENTOS (EDA)
+- **Regla de Aislamiento Inter-Feature**: Ningún feature puede importar clases de dominio, casos de uso, repositorios o controladores de otro feature. (Ejemplo: `features/billing/` NO puede importar `features/auth/`).
+- **Comunicación Vía Event Bus**: La comunicación entre módulos se realiza exclusivamente a través del `AppEventBus` (`lib/core/events/event_bus.dart`).
+  1. El feature origen ejecuta su caso de uso y emite un `DomainEvent` al `EventBus`.
+  2. Los features interesados se suscriben al flujo del `EventBus` y reaccionan de manera desacoplada.
+- **Trazabilidad de Eventos**: Todo evento debe heredar de `DomainEvent`, incluir un identificador único, marca temporal (`occurredOn`) y carga de datos inmutable.
+
+---
+
+### 5. DIRECTRICES ESPECÍFICAS PARA FLUTTER WEB
+- **Diseño Responsivo**: Toda vista debe adaptarse a resoluciones Desktop (pantallas anchas), Tablet y Mobile mediante utilidades en `lib/core/responsive/`.
+- **Manejo de Estado y Ciclo de Vida**: Liberar streams y suscripciones al `EventBus` en los métodos de disposición (`dispose`).
+- **Navegación Web**: Estructurada para soportar URLs legibles y deep linking.
+
+---
+
+### 6. PROTOCOLO DE INTERVENCIÓN DEL AGENTE
+Antes de responder a cualquier petición de código:
+1. **Validación**: Verificar que el código respeta la separación `domain / data / presentation` y que no viola la regla de importación inter-feature.
+2. **Alerta**: Si la petición pide una solución acoplada (ej: "llama al servicio de pagos desde la pantalla de perfil"), advertir al usuario la violación arquitectónica.
+3. **Solución Canónica**: Diseñar la solución desacoplada mediante un caso de uso local o la emisión/suscripción de un evento en el `EventBus`.
